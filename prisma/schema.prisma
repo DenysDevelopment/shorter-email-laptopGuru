@@ -1,0 +1,274 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  passwordHash  String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  videos          Video[]
+  landings        Landing[]
+  sentEmails      SentEmail[]
+  processedEmails IncomingEmail[]
+  quickLinks      QuickLink[]
+}
+
+model IncomingEmail {
+  id            String    @id @default(cuid())
+  messageId     String    @unique
+  from          String
+  subject       String
+  body          String
+  productUrl    String?
+  productName   String?
+  customerName  String?
+  customerEmail String?
+  customerPhone String?
+  receivedAt    DateTime
+  processed     Boolean   @default(false)
+  archived      Boolean   @default(false)
+  processedBy   User?     @relation(fields: [processedById], references: [id])
+  processedById String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  landings      Landing[]
+
+  @@index([processed])
+  @@index([archived])
+}
+
+model Video {
+  id            String    @id @default(cuid())
+  youtubeId     String    @unique
+  title         String
+  thumbnail     String
+  duration      String?
+  channelTitle  String?
+  active        Boolean   @default(true)
+  addedBy       User      @relation(fields: [userId], references: [id])
+  userId        String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  landings      Landing[]
+}
+
+model Landing {
+  id            String    @id @default(cuid())
+  slug          String    @unique
+  title         String
+  videoId       String
+  video         Video     @relation(fields: [videoId], references: [id])
+  productUrl    String
+  buyButtonText String    @default("Kup teraz")
+  personalNote  String?
+  customerName  String?
+  productName   String?
+  language      String    @default("pl")
+  emailId       String?
+  incomingEmail IncomingEmail? @relation(fields: [emailId], references: [id])
+  views         Int       @default(0)
+  clicks        Int       @default(0)
+  createdBy     User      @relation(fields: [userId], references: [id])
+  userId        String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  shortLinks    ShortLink[]
+  sentEmails    SentEmail[]
+
+  visits        LandingVisit[]
+
+  @@index([createdAt])
+}
+
+model ShortLink {
+  id            String    @id @default(cuid())
+  code          String    @unique
+  landingId     String
+  landing       Landing   @relation(fields: [landingId], references: [id])
+  clicks        Int       @default(0)
+  createdAt     DateTime  @default(now())
+}
+
+model SentEmail {
+  id            String    @id @default(cuid())
+  to            String
+  subject       String
+  landingId     String
+  landing       Landing   @relation(fields: [landingId], references: [id])
+  sentBy        User      @relation(fields: [userId], references: [id])
+  userId        String
+  status        String    @default("sent")
+  errorMessage  String?
+  sentAt        DateTime  @default(now())
+
+  @@index([sentAt])
+}
+
+model QuickLink {
+  id            String    @id @default(cuid())
+  slug          String    @unique       // /go/allegro, /go/olx, etc.
+  targetUrl     String                  // куда редиректить
+  name          String?                 // название для себя
+  clicks        Int       @default(0)
+  createdBy     User      @relation(fields: [userId], references: [id])
+  userId        String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  visits        QuickLinkVisit[]
+
+  @@index([slug])
+  @@index([createdAt])
+}
+
+model QuickLinkVisit {
+  id            String    @id @default(cuid())
+  quickLinkId   String
+  quickLink     QuickLink @relation(fields: [quickLinkId], references: [id])
+  visitedAt     DateTime  @default(now())
+
+  ip            String?
+  country       String?
+  city          String?
+  userAgent     String?
+  browser       String?
+  os            String?
+  deviceType    String?
+  referrer      String?
+  referrerDomain String?
+
+  @@index([quickLinkId])
+  @@index([visitedAt])
+}
+
+model LandingVisit {
+  id              String    @id @default(cuid())
+  landingId       String
+  landing         Landing   @relation(fields: [landingId], references: [id])
+
+  // Session
+  sessionId       String
+  visitedAt       DateTime  @default(now())
+
+  // Network & Geo (server-side from IP)
+  ip              String?
+  country         String?
+  countryCode     String?
+  city            String?
+  region          String?
+  timezone        String?
+  lat             Float?
+  lon             Float?
+  isp             String?
+  org             String?
+  asNumber        String?   // AS12345
+
+  // Server-side headers
+  userAgent       String?
+  acceptLang      String?   // full Accept-Language header
+  acceptEncoding  String?
+  dnt             Boolean?  // Do Not Track
+  secChUa         String?   // Sec-CH-UA client hints
+  secChMobile     String?   // ?0 or ?1
+  secChPlatform   String?   // "macOS", "Windows"...
+  secFetchSite    String?   // cross-site, same-origin...
+  secFetchMode    String?
+  secFetchDest    String?
+  xForwardedProto String?   // http or https
+  via             String?   // proxy info
+
+  // Device & Browser (parsed from UA)
+  browser         String?
+  browserVersion  String?
+  os              String?
+  osVersion       String?
+  deviceType      String?   // mobile / tablet / desktop
+  screenWidth     Int?
+  screenHeight    Int?
+  viewportWidth   Int?
+  viewportHeight  Int?
+  pixelRatio      Float?
+  touchSupport    Boolean?
+  maxTouchPoints  Int?
+
+  // Hardware (client-side)
+  cpuCores        Int?      // navigator.hardwareConcurrency
+  deviceMemory    Float?    // navigator.deviceMemory (GB)
+  gpuRenderer     String?   // WebGL renderer (actual GPU name)
+  gpuVendor       String?   // WebGL vendor
+
+  // Battery
+  batteryLevel    Float?    // 0-1
+  batteryCharging Boolean?
+
+  // Preferences
+  darkMode        Boolean?  // prefers-color-scheme: dark
+  reducedMotion   Boolean?  // prefers-reduced-motion
+  cookiesEnabled  Boolean?
+  doNotTrack      Boolean?  // navigator.doNotTrack
+  adBlocker       Boolean?  // detected ad blocker
+  pdfSupport      Boolean?
+
+  // Storage & performance
+  storageQuota    Float?    // MB available
+  downlink        Float?    // Mbps
+  rtt             Int?      // round trip time ms
+  saveData        Boolean?  // data saver mode
+
+  // Referrer & UTM
+  referrer        String?
+  referrerDomain  String?
+  utmSource       String?
+  utmMedium       String?
+  utmCampaign     String?
+  utmTerm         String?
+  utmContent      String?
+
+  // Engagement
+  timeOnPage      Int?      // seconds
+  maxScrollDepth  Int?      // percentage 0-100
+  buyButtonClicked Boolean  @default(false)
+
+  // Video engagement
+  videoPlayed     Boolean   @default(false)
+  videoWatchTime  Int?      // seconds
+  videoCompleted  Boolean   @default(false)
+
+  // Page interaction
+  pageVisible     Boolean   @default(true)
+  tabSwitches     Int       @default(0)
+  totalClicks     Int       @default(0)
+
+  // Language & locale
+  browserLang     String?
+  browserLangs    String?   // all navigator.languages joined
+  platform        String?
+  vendor          String?   // navigator.vendor
+
+  // Connection
+  connectionType  String?   // 4g, 3g, wifi etc
+
+  // Fingerprint & canvas
+  canvasHash      String?   // canvas fingerprint hash
+  webglHash       String?   // webgl fingerprint hash
+  audioHash       String?   // audio context fingerprint
+
+  // Extended data — all exotic fingerprinting in JSON
+  extendedData    Json?
+
+  @@index([landingId])
+  @@index([visitedAt])
+  @@index([sessionId])
+}

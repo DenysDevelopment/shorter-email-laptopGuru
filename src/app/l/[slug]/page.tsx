@@ -1,0 +1,77 @@
+import { notFound } from "next/navigation";
+import { prisma } from "@/lib/db";
+import type { Metadata } from "next";
+import { LandingClient } from "./landing-client";
+
+interface Props {
+  params: Promise<{ slug: string }>;
+}
+
+const metaByLang: Record<string, { desc: string; og: string }> = {
+  pl: { desc: "Recenzja wideo od laptopguru.pl", og: "Obejrzyj recenzję wideo od laptopguru.pl" },
+  uk: { desc: "Відеоогляд від laptopguru.pl", og: "Дивіться відеоогляд від laptopguru.pl" },
+  ru: { desc: "Видеообзор от laptopguru.pl", og: "Смотрите видеообзор от laptopguru.pl" },
+  en: { desc: "Video review from laptopguru.pl", og: "Watch a video review from laptopguru.pl" },
+};
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const landing = await prisma.landing.findUnique({
+    where: { slug },
+    include: { video: true },
+  });
+
+  if (!landing) return {};
+
+  const lang = landing.language || "pl";
+  const meta = metaByLang[lang] || metaByLang.pl;
+
+  return {
+    title: landing.title,
+    description: `${meta.desc} — ${landing.video.title}`,
+    openGraph: {
+      title: landing.title,
+      description: meta.og,
+      images: [landing.video.thumbnail],
+    },
+  };
+}
+
+export default async function LandingPage({ params }: Props) {
+  const { slug } = await params;
+
+  const landing = await prisma.landing.findUnique({
+    where: { slug },
+    include: { video: true },
+  });
+
+  if (!landing) notFound();
+
+  // Increment views
+  await prisma.landing.update({
+    where: { id: landing.id },
+    data: { views: { increment: 1 } },
+  });
+
+  const lang = (landing.language || "pl") as "pl" | "uk" | "ru" | "en";
+
+  return (
+    <LandingClient
+      landing={{
+        id: landing.id,
+        slug: landing.slug,
+        title: landing.title,
+        productUrl: landing.productUrl,
+        buyButtonText: landing.buyButtonText,
+        personalNote: landing.personalNote,
+        customerName: landing.customerName,
+        productName: landing.productName,
+        language: lang,
+      }}
+      video={{
+        youtubeId: landing.video.youtubeId,
+        title: landing.video.title,
+      }}
+    />
+  );
+}
