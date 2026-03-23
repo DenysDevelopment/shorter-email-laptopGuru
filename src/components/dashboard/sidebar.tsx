@@ -146,7 +146,7 @@ export function Sidebar() {
 					<div className='h-16 flex items-center px-5 border-b border-gray-100'>
 						<Link href='/dashboard' className='flex items-baseline gap-1.5'>
 							<span className='text-lg font-bold text-gray-900'>
-								shorterLINK
+								LaptopGuru
 							</span>
 						</Link>
 					</div>

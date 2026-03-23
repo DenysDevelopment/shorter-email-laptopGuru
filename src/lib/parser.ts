@@ -4,6 +4,7 @@ export interface ParsedEmailData {
   customerName: string | null;
   customerEmail: string | null;
   customerPhone: string | null;
+  category: "lead" | "other";
 }
 
 // Strip HTML tags for text analysis
@@ -21,7 +22,27 @@ export function parseEmail(body: string, subject: string): ParsedEmailData {
     customerName: extractCustomerName(text),
     customerEmail: extractCustomerEmail(text),
     customerPhone: extractCustomerPhone(text),
+    category: detectCategory(body, text),
   };
+}
+
+/** Detect if email is a website lead or other mail */
+export function detectCategory(html: string, text?: string): "lead" | "other" {
+  const plain = text ?? stripHtml(html);
+
+  // Has laptopguru.pl URL → lead
+  if (/laptopguru\.pl/i.test(html) || /laptopguru\.pl/i.test(plain)) return "lead";
+
+  // Shopify form fields pattern (Name + E-mail + Produkt together) → lead
+  const hasName = /Name\s*[:：]/i.test(plain);
+  const hasEmail = /E-mail\s*[:：]/i.test(plain);
+  const hasProdukt = /Produkt\s*[:：]/i.test(plain);
+  if (hasName && hasEmail && hasProdukt) return "lead";
+
+  // Has product-like form fields → lead
+  if (/(?:Produkt|товар|продукт|product)\s*[:：]/i.test(plain) && /(?:Link|ссылка|URL)\s*[:：]/i.test(plain)) return "lead";
+
+  return "other";
 }
 
 function extractProductUrl(html: string, text: string): string | null {

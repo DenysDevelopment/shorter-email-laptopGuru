@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { EditEmailModal } from "@/components/dashboard/edit-email-modal";
 
 interface IncomingEmail {
@@ -14,12 +15,14 @@ interface IncomingEmail {
   customerName: string | null;
   customerEmail: string | null;
   customerPhone: string | null;
+  category: string;
   receivedAt: string;
   processed: boolean;
   archived: boolean;
 }
 
 type Filter = "all" | "new" | "processed" | "archived";
+type Category = "all" | "lead" | "other";
 
 const filterLabels: Record<Filter, string> = {
   all: "Все",
@@ -28,9 +31,16 @@ const filterLabels: Record<Filter, string> = {
   archived: "Архив",
 };
 
+const categoryLabels: Record<Category, string> = {
+  all: "Все",
+  lead: "Заявки",
+  other: "Прочие",
+};
+
 export default function EmailsPage() {
   const [emails, setEmails] = useState<IncomingEmail[]>([]);
   const [filter, setFilter] = useState<Filter>("all");
+  const [category, setCategory] = useState<Category>("all");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -39,13 +49,15 @@ export default function EmailsPage() {
 
   const fetchEmails = useCallback(async () => {
     setLoading(true);
-    const res = await fetch(`/api/emails?filter=${filter}&page=${page}`);
+    const params = new URLSearchParams({ filter, page: String(page) });
+    if (category !== "all") params.set("category", category);
+    const res = await fetch(`/api/emails?${params}`);
     const data = await res.json();
     setEmails(data.emails);
     setTotalPages(data.totalPages);
     setTotal(data.total);
     setLoading(false);
-  }, [filter, page]);
+  }, [filter, category, page]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetching pattern
@@ -54,13 +66,21 @@ export default function EmailsPage() {
     return () => clearInterval(interval);
   }, [fetchEmails]);
 
-  async function handleArchive(id: string) {
+  async function handleArchive(e: React.MouseEvent, id: string) {
+    e.preventDefault();
+    e.stopPropagation();
     await fetch(`/api/emails/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ archived: true }),
     });
     fetchEmails();
+  }
+
+  function handleEdit(e: React.MouseEvent, email: IncomingEmail) {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingEmail(email);
   }
 
   function handleSaved() {
@@ -77,8 +97,8 @@ export default function EmailsPage() {
         </p>
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-1 mb-6 bg-gray-100 rounded-lg p-1 w-fit">
+      {/* Status Filters */}
+      <div className="flex gap-1 mb-3 bg-gray-100 rounded-lg p-1 w-fit">
         {(Object.keys(filterLabels) as Filter[]).map((f) => (
           <button
             key={f}
@@ -90,6 +110,23 @@ export default function EmailsPage() {
             }`}
           >
             {filterLabels[f]}
+          </button>
+        ))}
+      </div>
+
+      {/* Category Filters */}
+      <div className="flex gap-1 mb-6 bg-gray-100 rounded-lg p-1 w-fit">
+        {(Object.keys(categoryLabels) as Category[]).map((c) => (
+          <button
+            key={c}
+            onClick={() => { setCategory(c); setPage(1); }}
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              category === c
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            {categoryLabels[c]}
           </button>
         ))}
       </div>
@@ -107,9 +144,10 @@ export default function EmailsPage() {
       ) : (
         <div className="space-y-3">
           {emails.map((email) => (
-            <div
+            <Link
               key={email.id}
-              className="bg-white rounded-xl border border-gray-100 p-4 hover:border-gray-200 transition-colors"
+              href={`/emails/${email.id}`}
+              className="block bg-white rounded-xl border border-gray-100 p-4 hover:border-gray-200 transition-colors"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
@@ -120,6 +158,15 @@ export default function EmailsPage() {
                     <h3 className="text-sm font-semibold text-gray-900 truncate">
                       {email.customerName || email.from}
                     </h3>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full ${
+                        email.category === "lead"
+                          ? "bg-green-50 text-green-600"
+                          : "bg-gray-100 text-gray-500"
+                      }`}
+                    >
+                      {email.category === "lead" ? "Заявка" : "Прочее"}
+                    </span>
                     {email.processed && (
                       <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full">
                         Обработана
@@ -138,14 +185,14 @@ export default function EmailsPage() {
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <button
-                    onClick={() => setEditingEmail(email)}
+                    onClick={(e) => handleEdit(e, email)}
                     className="text-sm text-gray-500 hover:text-brand transition-colors px-2 py-1"
                   >
                     Редактировать
                   </button>
                   {!email.archived && (
                     <button
-                      onClick={() => handleArchive(email.id)}
+                      onClick={(e) => handleArchive(e, email.id)}
                       className="text-sm text-gray-400 hover:text-red-500 transition-colors px-2 py-1"
                     >
                       Архив
@@ -153,7 +200,7 @@ export default function EmailsPage() {
                   )}
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}

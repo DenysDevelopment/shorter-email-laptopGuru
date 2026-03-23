@@ -64,6 +64,7 @@ export async function syncEmails(): Promise<number> {
             customerName: extracted.customerName,
             customerEmail: extracted.customerEmail,
             customerPhone: extracted.customerPhone,
+            category: extracted.category,
           },
         });
 
