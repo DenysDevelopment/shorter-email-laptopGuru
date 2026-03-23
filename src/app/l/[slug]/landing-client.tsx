@@ -617,7 +617,7 @@ export function LandingClient({ landing, video }: Props) {
         videoTime += Math.round((Date.now() - videoWatchStartRef.current) / 1000);
       }
       return {
-        timeOnPage: Math.round((Date.now() - startTimeRef.current) / 1000),
+        timeOnPage: Math.round((Date.now() - (startTimeRef.current ?? Date.now())) / 1000),
         maxScrollDepth: maxScrollRef.current,
         totalClicks: clickCountRef.current,
         tabSwitches: tabSwitchesRef.current,
@@ -650,7 +650,7 @@ export function LandingClient({ landing, video }: Props) {
   }, [sendUpdate]);
 
   function handleBuyClick() {
-    sendUpdate({ buyButtonClicked: true, timeOnPage: Math.round((Date.now() - startTimeRef.current) / 1000) });
+    sendUpdate({ buyButtonClicked: true, timeOnPage: Math.round((Date.now() - (startTimeRef.current ?? Date.now())) / 1000) });
     fetch(`/api/landings/${landing.slug}/click`, { method: "POST" })
       .finally(() => {
         window.location.href = landing.productUrl;
