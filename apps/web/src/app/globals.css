@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #fb7830;
+  --color-brand-hover: #e56a25;
+  --color-brand-light: #fff4ed;
+  --color-brand-muted: rgba(251, 120, 48, 0.15);
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}

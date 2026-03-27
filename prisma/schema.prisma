@@ -1,10 +1,20 @@
-generator client {
+generator webClient {
   provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  output   = "../apps/web/src/generated/prisma"
+}
+
+generator apiClient {
+  provider = "prisma-client"
+  output   = "../apps/api/src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  USER
 }
 
 model User {
@@ -12,14 +22,30 @@ model User {
   email         String    @unique
   name          String?
   passwordHash  String
+  role          Role      @default(USER)
+  permissions   String[]  @default([])
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // Legacy relations
   videos          Video[]
   landings        Landing[]
   sentEmails      SentEmail[]
   processedEmails IncomingEmail[]
   quickLinks      QuickLink[]
+
+  // Messaging relations
+  contactMerges              ContactMerge[]             @relation("ContactMerges")
+  conversationAssignments    ConversationAssignment[]    @relation("ConversationAssignee")
+  conversationAssigns        ConversationAssignment[]    @relation("ConversationAssigner")
+  conversationTags           ConversationTag[]           @relation("TagAdder")
+  msgSentMessages            Message[]                   @relation("MessageSender")
+  internalNotes              InternalNote[]              @relation("NoteAuthor")
+  notifications              Notification[]              @relation("UserNotifications")
+  createdTemplates           Template[]                  @relation("TemplateCreator")
+  createdQuickReplies        MsgQuickReply[]             @relation("QuickReplyCreator")
+  createdAutoRules           AutoReplyRule[]             @relation("AutoReplyCreator")
+  teamMemberships            TeamMember[]                @relation("TeamMembership")
 }
 
 model IncomingEmail {
@@ -37,7 +63,7 @@ model IncomingEmail {
   category      String    @default("other") // "lead" | "other"
   processed     Boolean   @default(false)
   archived      Boolean   @default(false)
-  processedBy   User?     @relation(fields: [processedById], references: [id])
+  processedBy   User?     @relation(fields: [processedById], references: [id], onDelete: SetNull)
   processedById String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -47,7 +73,9 @@ model IncomingEmail {
   @@index([processed])
   @@index([archived])
   @@index([category])
+  @@index([from])
   @@index([customerEmail, productUrl])
+  @@index([receivedAt])
 }
 
 model Video {
@@ -58,7 +86,7 @@ model Video {
   duration      String?
   channelTitle  String?
   active        Boolean   @default(true)
-  addedBy       User      @relation(fields: [userId], references: [id])
+  addedBy       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId        String
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -82,7 +110,7 @@ model Landing {
   incomingEmail IncomingEmail? @relation(fields: [emailId], references: [id])
   views         Int       @default(0)
   clicks        Int       @default(0)
-  createdBy     User      @relation(fields: [userId], references: [id])
+  createdBy     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId        String
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -93,15 +121,18 @@ model Landing {
   visits        LandingVisit[]
 
   @@index([createdAt])
+  @@index([userId])
 }
 
 model ShortLink {
   id            String    @id @default(cuid())
   code          String    @unique
   landingId     String
-  landing       Landing   @relation(fields: [landingId], references: [id])
+  landing       Landing   @relation(fields: [landingId], references: [id], onDelete: Cascade)
   clicks        Int       @default(0)
   createdAt     DateTime  @default(now())
+
+  @@index([createdAt])
 }
 
 model SentEmail {
@@ -110,13 +141,14 @@ model SentEmail {
   subject       String
   landingId     String
   landing       Landing   @relation(fields: [landingId], references: [id])
-  sentBy        User      @relation(fields: [userId], references: [id])
+  sentBy        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId        String
   status        String    @default("sent")
   errorMessage  String?
   sentAt        DateTime  @default(now())
 
   @@index([sentAt])
+  @@index([userId])
 }
 
 model QuickLink {
@@ -125,7 +157,7 @@ model QuickLink {
   targetUrl     String                  // куда редиректить
   name          String?                 // название для себя
   clicks        Int       @default(0)
-  createdBy     User      @relation(fields: [userId], references: [id])
+  createdBy     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId        String
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -134,12 +166,13 @@ model QuickLink {
 
   @@index([slug])
   @@index([createdAt])
+  @@index([userId])
 }
 
 model QuickLinkVisit {
   id            String    @id @default(cuid())
   quickLinkId   String
-  quickLink     QuickLink @relation(fields: [quickLinkId], references: [id])
+  quickLink     QuickLink @relation(fields: [quickLinkId], references: [id], onDelete: Cascade)
   visitedAt     DateTime  @default(now())
 
   ip            String?
@@ -159,7 +192,7 @@ model QuickLinkVisit {
 model LandingVisit {
   id              String    @id @default(cuid())
   landingId       String
-  landing         Landing   @relation(fields: [landingId], references: [id])
+  landing         Landing   @relation(fields: [landingId], references: [id], onDelete: Cascade)
 
   // Session
   sessionId       String
@@ -274,4 +307,650 @@ model LandingVisit {
   @@index([landingId])
   @@index([visitedAt])
   @@index([sessionId])
+}
+
+// ========================================
+// OMNICHANNEL MESSAGING MODULE
+// ========================================
+
+// --- Enums ---
+
+enum ChannelType {
+  EMAIL
+  SMS
+  WHATSAPP
+  TELEGRAM
+  FACEBOOK_MESSENGER
+  INSTAGRAM_DIRECT
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageContentType {
+  TEXT
+  IMAGE
+  FILE
+  VIDEO
+  VOICE
+  GEOLOCATION
+  STICKER
+  CONTACT_CARD
+  TEMPLATE
+}
+
+enum MessageDeliveryStatus {
+  QUEUED
+  SENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+enum ConversationStatus {
+  NEW
+  OPEN
+  WAITING_REPLY
+  RESOLVED
+  CLOSED
+  SPAM
+}
+
+enum ConversationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum NotificationType {
+  NEW_MESSAGE
+  ASSIGNMENT
+  MENTION
+  SLA_BREACH
+  CONVERSATION_CLOSED
+}
+
+enum AutoReplyTrigger {
+  FIRST_MESSAGE
+  OUTSIDE_BUSINESS_HOURS
+  KEYWORD_MATCH
+}
+
+enum WebhookEventStatus {
+  PENDING
+  PROCESSED
+  FAILED
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  RETRYING
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum TeamRole {
+  LEADER
+  MEMBER
+}
+
+enum ContactMergeStatus {
+  MERGE_PENDING
+  MERGED
+  REJECTED
+}
+
+enum TemplateStatus {
+  DRAFT
+  APPROVED
+  TEMPLATE_REJECTED
+}
+
+// --- Contacts ---
+
+model Contact {
+  id          String   @id @default(cuid())
+  firstName   String?
+  lastName    String?
+  displayName String
+  avatarUrl   String?
+  company     String?
+  jobTitle    String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  channels      ContactChannel[]
+  conversations Conversation[]
+  mergedInto    ContactMerge[]       @relation("MergedFrom")
+  mergedFrom    ContactMerge[]       @relation("MergedInto")
+  customFields  ContactCustomField[]
+  messages      Message[]            @relation("MessageContact")
+
+  @@index([displayName])
+  @@index([createdAt])
+}
+
+model ContactChannel {
+  id          String      @id @default(cuid())
+  contactId   String
+  contact     Contact     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  channelType ChannelType
+  identifier  String
+  verified    Boolean     @default(false)
+  isPrimary   Boolean     @default(false)
+  displayName String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@unique([channelType, identifier])
+  @@index([contactId])
+  @@index([identifier])
+}
+
+model ContactMerge {
+  id              String             @id @default(cuid())
+  sourceContactId String
+  sourceContact   Contact            @relation("MergedFrom", fields: [sourceContactId], references: [id])
+  targetContactId String
+  targetContact   Contact            @relation("MergedInto", fields: [targetContactId], references: [id])
+  status          ContactMergeStatus @default(MERGE_PENDING)
+  mergedBy        String?
+  mergedByUser    User?              @relation("ContactMerges", fields: [mergedBy], references: [id])
+  createdAt       DateTime           @default(now())
+  mergedAt        DateTime?
+
+  @@index([sourceContactId])
+  @@index([targetContactId])
+}
+
+model ContactCustomField {
+  id         String  @id @default(cuid())
+  contactId  String
+  contact    Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  fieldName  String
+  fieldValue String
+
+  @@unique([contactId, fieldName])
+  @@index([contactId])
+}
+
+// --- Channels ---
+
+model Channel {
+  id        String      @id @default(cuid())
+  name      String
+  type      ChannelType
+  isActive  Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  config        ChannelConfig[]
+  conversations Conversation[]
+  messages      Message[]
+  templates     Template[]
+  autoRules     AutoReplyRule[]
+
+  @@index([type])
+}
+
+model ChannelConfig {
+  id        String  @id @default(cuid())
+  channelId String
+  channel   Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  key       String
+  value     String
+  isSecret  Boolean @default(false)
+
+  @@unique([channelId, key])
+  @@index([channelId])
+}
+
+// --- Conversations ---
+
+model Conversation {
+  id            String               @id @default(cuid())
+  contactId     String
+  contact       Contact              @relation(fields: [contactId], references: [id])
+  channelId     String
+  channel       Channel              @relation(fields: [channelId], references: [id])
+  subject       String?
+  status        ConversationStatus   @default(NEW)
+  priority      ConversationPriority @default(NORMAL)
+  externalId    String?
+  lastMessageAt DateTime?
+  closedAt      DateTime?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  messages    Message[]
+  tags        ConversationTag[]
+  assignments ConversationAssignment[]
+  notes       InternalNote[]
+  slaTracking ConversationSla[]
+
+  @@index([contactId])
+  @@index([channelId])
+  @@index([status])
+  @@index([priority])
+  @@index([lastMessageAt])
+  @@index([createdAt])
+}
+
+model ConversationTag {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  tagId          String
+  tag            Tag          @relation(fields: [tagId], references: [id])
+  addedBy        String?
+  addedByUser    User?        @relation("TagAdder", fields: [addedBy], references: [id])
+  createdAt      DateTime     @default(now())
+
+  @@unique([conversationId, tagId])
+  @@index([conversationId])
+  @@index([tagId])
+}
+
+model ConversationAssignment {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation("ConversationAssignee", fields: [userId], references: [id])
+  assignedBy     String?
+  assignedByUser User?        @relation("ConversationAssigner", fields: [assignedBy], references: [id])
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  unassignedAt   DateTime?
+
+  @@index([conversationId])
+  @@index([userId])
+  @@index([isActive])
+}
+
+model ConversationSla {
+  id               String       @id @default(cuid())
+  conversationId   String
+  conversation     Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  firstResponseDue DateTime?
+  firstResponseAt  DateTime?
+  resolutionDue    DateTime?
+  resolvedAt       DateTime?
+  breached         Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+
+  @@index([conversationId])
+  @@index([breached])
+}
+
+// --- Messages ---
+
+model Message {
+  id             String             @id @default(cuid())
+  conversationId String
+  conversation   Conversation       @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  channelId      String
+  channel        Channel            @relation(fields: [channelId], references: [id])
+  direction      MessageDirection
+  contentType    MessageContentType @default(TEXT)
+  body           String?
+  externalId     String?
+  senderId       String?
+  senderUser     User?              @relation("MessageSender", fields: [senderId], references: [id])
+  contactId      String?
+  contact        Contact?           @relation("MessageContact", fields: [contactId], references: [id])
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  attachments MessageAttachment[]
+  reactions   MessageReaction[]
+  statuses    MessageStatusEvent[]
+  geolocation MessageGeolocation?
+
+  @@index([conversationId])
+  @@index([channelId])
+  @@index([direction])
+  @@index([createdAt])
+  @@index([externalId])
+}
+
+model MessageStatusEvent {
+  id        String                @id @default(cuid())
+  messageId String
+  message   Message               @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  status    MessageDeliveryStatus
+  error     String?
+  timestamp DateTime              @default(now())
+
+  @@index([messageId])
+  @@index([status])
+}
+
+model MessageAttachment {
+  id           String   @id @default(cuid())
+  messageId    String
+  message      Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  fileName     String
+  mimeType     String
+  fileSize     Int
+  storageKey   String
+  storageUrl   String
+  thumbnailKey String?
+  createdAt    DateTime @default(now())
+
+  @@index([messageId])
+}
+
+model MessageReaction {
+  id        String   @id @default(cuid())
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  emoji     String
+  reactedBy String?
+  createdAt DateTime @default(now())
+
+  @@unique([messageId, emoji, reactedBy])
+  @@index([messageId])
+}
+
+model MessageGeolocation {
+  id        String  @id @default(cuid())
+  messageId String  @unique
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  latitude  Float
+  longitude Float
+  address   String?
+  label     String?
+}
+
+// --- Internal Notes ---
+
+model InternalNote {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  authorId       String
+  author         User         @relation("NoteAuthor", fields: [authorId], references: [id])
+  body           String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([conversationId])
+  @@index([authorId])
+}
+
+// --- Tags ---
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String?
+  createdAt DateTime @default(now())
+
+  conversations ConversationTag[]
+}
+
+// --- Templates & Quick Replies ---
+
+model Template {
+  id         String         @id @default(cuid())
+  channelId  String?
+  channel    Channel?       @relation(fields: [channelId], references: [id])
+  name       String
+  body       String
+  status     TemplateStatus @default(DRAFT)
+  externalId String?
+  language   String         @default("pl")
+  createdBy  String
+  createdByUser User        @relation("TemplateCreator", fields: [createdBy], references: [id])
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  variables TemplateVariable[]
+
+  @@index([channelId])
+  @@index([status])
+}
+
+model TemplateVariable {
+  id           String   @id @default(cuid())
+  templateId   String
+  template     Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  key          String
+  label        String
+  defaultValue String?
+  sortOrder    Int      @default(0)
+
+  @@unique([templateId, key])
+  @@index([templateId])
+}
+
+model MsgQuickReply {
+  id        String   @id @default(cuid())
+  shortcut  String   @unique
+  title     String
+  body      String
+  createdBy String
+  createdByUser User @relation("QuickReplyCreator", fields: [createdBy], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// --- Auto-Reply Rules ---
+
+model AutoReplyRule {
+  id           String           @id @default(cuid())
+  channelId    String?
+  channel      Channel?         @relation(fields: [channelId], references: [id])
+  trigger      AutoReplyTrigger
+  keyword      String?
+  responseBody String
+  isActive     Boolean          @default(true)
+  priority     Int              @default(0)
+  createdBy    String
+  createdByUser User            @relation("AutoReplyCreator", fields: [createdBy], references: [id])
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([channelId])
+  @@index([trigger])
+  @@index([isActive])
+}
+
+// --- Teams ---
+
+model Team {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members TeamMember[]
+}
+
+model TeamMember {
+  id       String   @id @default(cuid())
+  teamId   String
+  team     Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User     @relation("TeamMembership", fields: [userId], references: [id])
+  role     TeamRole @default(MEMBER)
+  joinedAt DateTime @default(now())
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+}
+
+// --- Business Hours ---
+
+model BusinessHoursSchedule {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  timezone  String   @default("Europe/Warsaw")
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  slots BusinessHoursSlot[]
+}
+
+model BusinessHoursSlot {
+  id         String                @id @default(cuid())
+  scheduleId String
+  schedule   BusinessHoursSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  dayOfWeek  DayOfWeek
+  startTime  String
+  endTime    String
+  isActive   Boolean               @default(true)
+
+  @@unique([scheduleId, dayOfWeek, startTime])
+  @@index([scheduleId])
+}
+
+// --- Notifications ---
+
+model Notification {
+  id             String           @id @default(cuid())
+  userId         String
+  user           User             @relation("UserNotifications", fields: [userId], references: [id])
+  type           NotificationType
+  title          String
+  body           String?
+  conversationId String?
+  messageId      String?
+  isRead         Boolean          @default(false)
+  createdAt      DateTime         @default(now())
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+}
+
+// --- Webhook Events ---
+
+model WebhookEvent {
+  id          String             @id @default(cuid())
+  channelType ChannelType
+  externalId  String?
+  payload     String
+  status      WebhookEventStatus @default(PENDING)
+  error       String?
+  attempts    Int                @default(0)
+  processedAt DateTime?
+  createdAt   DateTime           @default(now())
+
+  @@unique([channelType, externalId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// --- Outbound Job Queue ---
+
+model OutboundJob {
+  id          String      @id @default(cuid())
+  messageId   String?
+  channelType ChannelType
+  recipientId String
+  payload     String
+  status      JobStatus   @default(PENDING)
+  attempts    Int         @default(0)
+  maxAttempts Int         @default(3)
+  lastError   String?
+  scheduledAt DateTime    @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime    @default(now())
+
+  logs OutboundJobLog[]
+
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([channelType])
+}
+
+model OutboundJobLog {
+  id        String    @id @default(cuid())
+  jobId     String
+  job       OutboundJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  attempt   Int
+  status    JobStatus
+  error     String?
+  duration  Int?
+  timestamp DateTime  @default(now())
+
+  @@index([jobId])
+}
+
+// --- Analytics Aggregation ---
+
+model AnalyticsMessageDaily {
+  id          String           @id @default(cuid())
+  date        DateTime         @db.Date
+  channelType ChannelType
+  direction   MessageDirection
+  count       Int              @default(0)
+
+  @@unique([date, channelType, direction])
+  @@index([date])
+  @@index([date, channelType])
+}
+
+model AnalyticsConversationDaily {
+  id          String             @id @default(cuid())
+  date        DateTime           @db.Date
+  channelType ChannelType
+  status      ConversationStatus
+  count       Int                @default(0)
+
+  @@unique([date, channelType, status])
+  @@index([date])
+  @@index([date, channelType])
+}
+
+model AnalyticsResponseTime {
+  id               String      @id @default(cuid())
+  date             DateTime    @db.Date
+  userId           String?
+  channelType      ChannelType
+  avgResponseMs    Int
+  medianResponseMs Int?
+  p95ResponseMs    Int?
+  sampleCount      Int         @default(0)
+
+  @@unique([date, userId, channelType])
+  @@index([date])
+  @@index([userId])
+  @@index([date, channelType])
+}
+
+// --- Typing Indicators ---
+
+model TypingIndicator {
+  id             String   @id @default(cuid())
+  conversationId String
+  userId         String?
+  contactId      String?
+  isTyping       Boolean  @default(true)
+  updatedAt      DateTime @updatedAt
+
+  @@unique([conversationId, userId])
+  @@unique([conversationId, contactId])
+  @@index([conversationId])
 }
