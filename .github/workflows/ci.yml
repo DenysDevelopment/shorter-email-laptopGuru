@@ -11,8 +11,8 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  lint:
-    name: Lint
+  check:
+    name: Lint & Type Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,11 +23,19 @@ jobs:
           cache: npm
 
       - run: npm ci --legacy-peer-deps
-      - run: npm run lint
+
+      - name: Generate Prisma clients
+        run: npx prisma generate
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check (web)
+        run: npx tsc --project apps/web/tsconfig.json --noEmit
 
   build-and-push:
     name: Build & Push Image
-    needs: lint
+    needs: check
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -56,6 +64,7 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
+          file: apps/web/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -82,7 +91,11 @@ jobs:
               app:
                 image: ghcr.io/denysdevelopment/shorter-email-laptopguru:latest
                 build: !reset null
+                restart: always
             PRODEOF
             echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ secrets.GHCR_USER }} --password-stdin
             docker pull ghcr.io/denysdevelopment/shorter-email-laptopguru:latest
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-deps app
+            # Health check
+            sleep 10
+            curl -sf http://localhost:3000/api/health || echo "WARNING: Health check failed"

@@ -1,22 +1,21 @@
 # dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+node_modules/
 
 # testing
 /coverage
 
 # next.js
-/.next/
+.next/
 /out/
+
+# nestjs
+dist/
 
 # production
 /build
+
+# turbo
+.turbo/
 
 # misc
 .DS_Store
@@ -39,9 +38,14 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# prisma
+# prisma generated
+apps/web/src/generated/prisma
+apps/api/src/generated/prisma
 
 # superpowers
 .superpowers/
 
-/src/generated/prisma
+# deploy keys — never commit
+deploy_key
+deploy_key.pub
+*.key

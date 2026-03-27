@@ -1,7 +1,9 @@
 services:
   app:
-    build: .
-    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: always
     ports:
       - "3000:3000"
     environment:

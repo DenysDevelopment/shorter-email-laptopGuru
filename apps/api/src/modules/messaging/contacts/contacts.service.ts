@@ -1,0 +1,191 @@
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { CreateContactDto, ContactChannelDto } from './dto/create-contact.dto';
+import { UpdateContactDto } from './dto/update-contact.dto';
+import { SearchContactsDto } from './dto/search-contacts.dto';
+
+@Injectable()
+export class ContactsService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async findAll(query: SearchContactsDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const skip = (page - 1) * limit;
+
+    const where: Record<string, unknown> = {};
+
+    if (query.search) {
+      where.OR = [
+        { displayName: { contains: query.search, mode: 'insensitive' } },
+        { firstName: { contains: query.search, mode: 'insensitive' } },
+        { lastName: { contains: query.search, mode: 'insensitive' } },
+        { company: { contains: query.search, mode: 'insensitive' } },
+        {
+          channels: {
+            some: { identifier: { contains: query.search, mode: 'insensitive' } },
+          },
+        },
+      ];
+    }
+
+    if (query.channelType) {
+      where.channels = {
+        ...(where.channels as object),
+        some: { channelType: query.channelType },
+      };
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.contact.findMany({
+        where,
+        include: { channels: true },
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.contact.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async findOne(id: string) {
+    const contact = await this.prisma.contact.findUnique({
+      where: { id },
+      include: {
+        channels: true,
+        customFields: true,
+        conversations: {
+          include: { channel: true },
+          orderBy: { lastMessageAt: 'desc' },
+          take: 10,
+        },
+      },
+    });
+    if (!contact) throw new NotFoundException(`Contact ${id} not found`);
+    return contact;
+  }
+
+  async create(dto: CreateContactDto) {
+    return this.prisma.contact.create({
+      data: {
+        displayName: dto.displayName,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        avatarUrl: dto.avatarUrl,
+        company: dto.company,
+        jobTitle: dto.jobTitle,
+        notes: dto.notes,
+        channels: dto.channels?.length
+          ? {
+              create: dto.channels.map((ch) => ({
+                channelType: ch.channelType,
+                identifier: ch.identifier,
+                isPrimary: ch.isPrimary ?? false,
+                displayName: ch.displayName,
+              })),
+            }
+          : undefined,
+      },
+      include: { channels: true },
+    });
+  }
+
+  async update(id: string, dto: UpdateContactDto) {
+    await this.ensureExists(id);
+    return this.prisma.contact.update({
+      where: { id },
+      data: {
+        ...(dto.displayName !== undefined && { displayName: dto.displayName }),
+        ...(dto.firstName !== undefined && { firstName: dto.firstName }),
+        ...(dto.lastName !== undefined && { lastName: dto.lastName }),
+        ...(dto.avatarUrl !== undefined && { avatarUrl: dto.avatarUrl }),
+        ...(dto.company !== undefined && { company: dto.company }),
+        ...(dto.jobTitle !== undefined && { jobTitle: dto.jobTitle }),
+        ...(dto.notes !== undefined && { notes: dto.notes }),
+      },
+      include: { channels: true },
+    });
+  }
+
+  async addChannel(contactId: string, dto: ContactChannelDto) {
+    await this.ensureExists(contactId);
+    return this.prisma.contactChannel.create({
+      data: {
+        contactId,
+        channelType: dto.channelType,
+        identifier: dto.identifier,
+        isPrimary: dto.isPrimary ?? false,
+        displayName: dto.displayName,
+      },
+    });
+  }
+
+  async mergeContacts(sourceId: string, targetId: string, userId: string) {
+    if (sourceId === targetId) {
+      throw new BadRequestException('Cannot merge a contact with itself');
+    }
+
+    const [source, target] = await Promise.all([
+      this.prisma.contact.findUnique({ where: { id: sourceId }, include: { channels: true } }),
+      this.prisma.contact.findUnique({ where: { id: targetId } }),
+    ]);
+
+    if (!source) throw new NotFoundException(`Source contact ${sourceId} not found`);
+    if (!target) throw new NotFoundException(`Target contact ${targetId} not found`);
+
+    // Use transaction to ensure atomicity of merge operation
+    return this.prisma.$transaction(async (tx) => {
+      const merge = await tx.contactMerge.create({
+        data: {
+          sourceContactId: sourceId,
+          targetContactId: targetId,
+          mergedBy: userId,
+          status: 'MERGED',
+          mergedAt: new Date(),
+        },
+      });
+
+      // Move conversations from source to target
+      await tx.conversation.updateMany({
+        where: { contactId: sourceId },
+        data: { contactId: targetId },
+      });
+
+      // Move channels from source to target (skip duplicates)
+      for (const ch of source.channels) {
+        const existing = await tx.contactChannel.findUnique({
+          where: {
+            channelType_identifier: {
+              channelType: ch.channelType,
+              identifier: ch.identifier,
+            },
+          },
+        });
+        if (!existing || existing.contactId === sourceId) {
+          await tx.contactChannel.updateMany({
+            where: { id: ch.id },
+            data: { contactId: targetId },
+          });
+        }
+      }
+
+      return merge;
+    });
+  }
+
+  private async ensureExists(id: string) {
+    const contact = await this.prisma.contact.findUnique({ where: { id } });
+    if (!contact) throw new NotFoundException(`Contact ${id} not found`);
+    return contact;
+  }
+}

@@ -1,8 +1,0 @@
-@import "tailwindcss";
-
-@theme {
-  --color-brand: #fb7830;
-  --color-brand-hover: #e56a25;
-  --color-brand-light: #fff4ed;
-  --color-brand-muted: rgba(251, 120, 48, 0.15);
-}
