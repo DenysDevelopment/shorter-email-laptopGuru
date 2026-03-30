@@ -23,6 +23,13 @@ const CHANNEL_TYPES = [
 	{ value: 'WEBCHAT', label: 'Веб-чат' },
 ];
 
+const EMAIL_DEFAULTS: Record<string, string> = {
+	imapHost: 'imap.hostinger.com',
+	imapPort: '993',
+	smtpHost: 'smtp.hostinger.com',
+	smtpPort: '465',
+};
+
 const CONFIG_FIELDS: Record<string, { key: string; label: string; type: string }[]> = {
 	EMAIL: [
 		{ key: 'imapHost', label: 'IMAP Хост', type: 'text' },
@@ -194,7 +201,7 @@ export default function ChannelsSettingsPage() {
 					</p>
 				</div>
 				<button
-					onClick={() => setShowModal(true)}
+					onClick={() => { setShowModal(true); setNewChannelConfig({ ...EMAIL_DEFAULTS }); }}
 					className='inline-flex items-center gap-2 bg-brand hover:bg-brand-hover text-white font-medium px-4 py-2.5 rounded-lg transition-colors text-sm'>
 					<svg className='w-4 h-4' fill='none' viewBox='0 0 24 24' strokeWidth={2} stroke='currentColor'>
 						<path strokeLinecap='round' strokeLinejoin='round' d='M12 4.5v15m7.5-7.5h-15' />
@@ -309,7 +316,7 @@ export default function ChannelsSettingsPage() {
 											key={ct.value}
 											onClick={() => {
 												setNewChannelType(ct.value);
-												setNewChannelConfig({});
+												setNewChannelConfig(ct.value === 'EMAIL' ? { ...EMAIL_DEFAULTS } : {});
 											}}
 											className={`flex items-center gap-2 p-3 rounded-xl border transition-colors ${
 												newChannelType === ct.value
