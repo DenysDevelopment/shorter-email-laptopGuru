@@ -49,6 +49,7 @@ COPY --from=deps /app/node_modules/prisma ./node_modules/prisma
 COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=deps /app/node_modules/dotenv ./node_modules/dotenv
 COPY --from=deps /app/node_modules/valibot ./node_modules/valibot
+COPY --from=deps /app/node_modules/pathe ./node_modules/pathe
 
 # Entrypoint: run migrations then start
 RUN printf '#!/bin/sh\necho "Running migrations..."\nnode -e "\
