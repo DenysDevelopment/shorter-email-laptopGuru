@@ -6,6 +6,15 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 import { MessagingModule } from './modules/messaging/messaging.module';
+import { VideosModule } from './modules/videos/videos.module';
+import { EmailsModule } from './modules/emails/emails.module';
+import { LinksModule } from './modules/links/links.module';
+import { SendModule } from './modules/send/send.module';
+import { SentModule } from './modules/sent/sent.module';
+import { QuickLinksModule } from './modules/quicklinks/quicklinks.module';
+import { LandingsModule } from './modules/landings/landings.module';
+import { StatsModule } from './modules/stats/stats.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -19,6 +28,15 @@ import { MessagingModule } from './modules/messaging/messaging.module';
     AuthModule,
     HealthModule,
     MessagingModule,
+    VideosModule,
+    EmailsModule,
+    LinksModule,
+    SendModule,
+    SentModule,
+    QuickLinksModule,
+    LandingsModule,
+    StatsModule,
+    AdminModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
