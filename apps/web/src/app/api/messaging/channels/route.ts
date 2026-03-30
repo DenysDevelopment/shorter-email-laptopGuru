@@ -63,6 +63,51 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Check for duplicate channel by username/login (EMAIL) or name
+  if (type === "EMAIL" && config && Array.isArray(config)) {
+    const username = config.find((c: { key: string }) => c.key === "username")?.value;
+    if (username) {
+      const existing = await prisma.channel.findFirst({
+        where: { type: "EMAIL" },
+        include: { config: true },
+      });
+      if (existing) {
+        const existingUsername = existing.config.find((c) => c.key === "username")?.value;
+        if (existingUsername === username) {
+          return NextResponse.json(
+            { error: `Канал с логином ${username} уже существует` },
+            { status: 409 },
+          );
+        }
+      }
+      // Check all EMAIL channels
+      const allEmailChannels = await prisma.channel.findMany({
+        where: { type: "EMAIL" },
+        include: { config: true },
+      });
+      for (const ch of allEmailChannels) {
+        const chUsername = ch.config.find((c) => c.key === "username")?.value;
+        if (chUsername === username) {
+          return NextResponse.json(
+            { error: `Канал с логином ${username} уже существует` },
+            { status: 409 },
+          );
+        }
+      }
+    }
+  }
+
+  // Check duplicate by name
+  const existingByName = await prisma.channel.findFirst({
+    where: { name, type },
+  });
+  if (existingByName) {
+    return NextResponse.json(
+      { error: `Канал "${name}" такого типа уже существует` },
+      { status: 409 },
+    );
+  }
+
   const channel = await prisma.channel.create({
     data: {
       name,

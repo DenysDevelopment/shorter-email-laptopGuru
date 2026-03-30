@@ -127,6 +127,9 @@ export default function ChannelsSettingsPage() {
 				setNewChannelName('');
 				setNewChannelConfig({});
 				fetchChannels();
+			} else {
+				const err = await res.json();
+				alert(err.error || 'Ошибка создания канала');
 			}
 		} catch { /* ignore */ }
 		setSaving(false);
