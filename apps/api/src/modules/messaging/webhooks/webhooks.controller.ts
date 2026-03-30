@@ -34,21 +34,25 @@ export class WebhooksController {
   async handleTelegram(@Req() req: Request) {
     const rawPayload = JSON.stringify(req.body);
 
-    // Validate webhook secret if configured
+    // Validate webhook secret: check channel config, only reject if secret is
+    // configured but the header doesn't match (allow through if no secret configured)
     const secretHeader = req.headers['x-telegram-bot-api-secret-token'] as string | undefined;
-    if (secretHeader) {
-      const isValid = await this.validateTelegramSecret(secretHeader);
-      if (!isValid) {
-        this.logger.warn('Invalid Telegram webhook secret');
-        throw new BadRequestException('Invalid webhook secret');
-      }
+    const isValid = await this.validateTelegramSecret(secretHeader);
+    if (!isValid) {
+      this.logger.warn('Invalid Telegram webhook secret');
+      return { ok: true }; // Return 200 to avoid Telegram retries
     }
 
     const update = req.body as Record<string, unknown>;
     const message = (update['message'] ?? update['edited_message'] ?? update['channel_post']) as
       | Record<string, unknown>
       | undefined;
-    const externalId = message ? String(message['message_id']) : undefined;
+
+    if (!message) {
+      return { ok: true }; // Ignore non-message updates
+    }
+
+    const externalId = String((message as Record<string, unknown>)['message_id']);
 
     await this.webhooksService.processWebhook(
       ChannelType.TELEGRAM,
@@ -151,21 +155,30 @@ export class WebhooksController {
 
   // ─── Validation Helpers ───────────────────────────────
 
-  private async validateTelegramSecret(secret: string): Promise<boolean> {
-    const channels = await this.prisma.channel.findMany({
+  private async validateTelegramSecret(
+    secretHeader: string | undefined,
+  ): Promise<boolean> {
+    const channel = await this.prisma.channel.findFirst({
       where: { type: ChannelType.TELEGRAM, isActive: true },
       include: { config: true },
     });
 
-    for (const channel of channels) {
-      const webhookSecret = channel.config.find(
-        (c) => c.key === 'webhook_secret',
-      );
-      if (webhookSecret && webhookSecret.value === secret) {
-        return true;
-      }
+    if (!channel) {
+      // No active Telegram channel found — allow through (processor will handle)
+      return true;
     }
-    return channels.length === 0; // Allow if no channels configured yet
+
+    const configSecret = channel.config.find(
+      (c) => c.key === 'webhook_secret',
+    )?.value;
+
+    // If no webhook_secret configured, allow through
+    if (!configSecret) {
+      return true;
+    }
+
+    // Secret is configured — header must match
+    return secretHeader === configSecret;
   }
 
   private async validateWhatsAppVerifyToken(token: string): Promise<boolean> {

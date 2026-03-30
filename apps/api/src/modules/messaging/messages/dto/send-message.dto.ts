@@ -30,10 +30,9 @@ export class SendMessageDto {
   @IsEnum(MessageContentType)
   contentType?: MessageContentType = MessageContentType.TEXT;
 
-  @IsOptional()
   @IsString()
   @MaxLength(10000)
-  body?: string;
+  body: string;
 
   @IsOptional()
   @IsArray()

@@ -32,7 +32,11 @@ export class TemplatesController {
     @Query('status') status?: string,
     @Query('language') language?: string,
   ) {
-    return this.templatesService.findAll({ channelId, status, language });
+    return this.templatesService.findAll({
+      channelId,
+      status,
+      language,
+    });
   }
 
   @Post()

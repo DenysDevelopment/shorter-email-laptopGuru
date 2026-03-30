@@ -38,6 +38,11 @@ export interface ParsedInboundMessage {
   externalId: string;
   senderIdentifier: string;
   senderDisplayName?: string;
+  senderFirstName?: string;
+  senderLastName?: string;
+  senderUsername?: string;
+  /** Platform-specific numeric user ID (e.g. Telegram user ID for avatar fetching) */
+  senderUserId?: number;
   conversationExternalId?: string;
   direction: MessageDirection;
   contentType: MessageContentType;

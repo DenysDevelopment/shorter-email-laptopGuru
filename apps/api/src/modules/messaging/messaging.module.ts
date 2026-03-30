@@ -15,6 +15,7 @@ import { MessagingAnalyticsModule } from './analytics/messaging-analytics.module
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { QueueModule } from './queue/queue.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { SyncModule } from './sync/sync.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     WebhooksModule,
     QueueModule,
     NotificationsModule,
+    SyncModule,
   ],
 })
 export class MessagingModule {}

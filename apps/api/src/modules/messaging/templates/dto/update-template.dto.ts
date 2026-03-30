@@ -17,6 +17,10 @@ export class UpdateTemplateDto {
   channelId?: string;
 
   @IsOptional()
+  @IsString()
+  channelType?: string;
+
+  @IsOptional()
   @IsEnum(TemplateStatus)
   status?: TemplateStatus;
 

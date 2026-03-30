@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { CreateTeamDto, UpdateTeamDto, AddTeamMemberDto } from './dto/create-team.dto';
@@ -12,13 +13,27 @@ export class TeamsService {
 
   async findAll() {
     const teams = await this.prisma.team.findMany({
-      include: { _count: { select: { members: true } } },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { name: 'asc' },
+      include: {
+        members: {
+          include: {
+            user: { select: { id: true, name: true, email: true } },
+          },
+        },
+      },
     });
+
     return teams.map((t) => ({
-      ...t,
-      memberCount: t._count.members,
-      _count: undefined,
+      id: t.id,
+      name: t.name,
+      description: t.description,
+      createdAt: t.createdAt,
+      members: t.members.map((m) => ({
+        id: m.user.id,
+        name: m.user.name,
+        email: m.user.email,
+        role: m.role,
+      })),
     }));
   }
 
@@ -35,17 +50,52 @@ export class TeamsService {
       },
     });
     if (!team) throw new NotFoundException(`Team ${id} not found`);
-    return team;
+
+    return {
+      id: team.id,
+      name: team.name,
+      description: team.description,
+      createdAt: team.createdAt,
+      members: team.members.map((m) => ({
+        id: m.user.id,
+        name: m.user.name,
+        email: m.user.email,
+        role: m.role,
+      })),
+    };
   }
 
   async create(dto: CreateTeamDto) {
-    return this.prisma.team.create({
+    if (!dto.name?.trim()) {
+      throw new BadRequestException('name is required');
+    }
+
+    const team = await this.prisma.team.create({
       data: {
-        name: dto.name,
-        description: dto.description,
+        name: dto.name.trim(),
+        description: dto.description || null,
       },
-      include: { _count: { select: { members: true } } },
+      include: {
+        members: {
+          include: {
+            user: { select: { id: true, name: true, email: true } },
+          },
+        },
+      },
     });
+
+    return {
+      id: team.id,
+      name: team.name,
+      description: team.description,
+      createdAt: team.createdAt,
+      members: team.members.map((m) => ({
+        id: m.user.id,
+        name: m.user.name,
+        email: m.user.email,
+        role: m.role,
+      })),
+    };
   }
 
   async update(id: string, dto: UpdateTeamDto) {
@@ -95,9 +145,11 @@ export class TeamsService {
       throw new NotFoundException('Team member not found');
     }
 
-    return this.prisma.teamMember.delete({
-      where: { teamId_userId: { teamId, userId } },
+    await this.prisma.teamMember.deleteMany({
+      where: { teamId, userId },
     });
+
+    return { ok: true };
   }
 
   private async ensureExists(id: string) {

@@ -11,64 +11,84 @@ export class QuickRepliesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll() {
-    return this.prisma.msgQuickReply.findMany({
+    const quickReplies = await this.prisma.msgQuickReply.findMany({
       orderBy: { createdAt: 'desc' },
-      include: {
-        createdByUser: { select: { id: true, name: true, email: true } },
-      },
     });
+
+    return quickReplies.map((qr) => ({
+      id: qr.id,
+      shortcut: qr.shortcut,
+      title: qr.title,
+      body: qr.body,
+      createdAt: qr.createdAt,
+    }));
   }
 
   async create(dto: { shortcut: string; title: string; body: string }, userId: string) {
-    if (!dto.shortcut.startsWith('/')) {
-      throw new BadRequestException('Shortcut must start with /');
+    if (!dto.shortcut?.trim() || !dto.title?.trim() || !dto.body?.trim()) {
+      throw new BadRequestException('shortcut, title, and body are required');
     }
 
     const existing = await this.prisma.msgQuickReply.findUnique({
-      where: { shortcut: dto.shortcut },
+      where: { shortcut: dto.shortcut.trim() },
     });
     if (existing) {
       throw new ConflictException(`Shortcut "${dto.shortcut}" already exists`);
     }
 
-    return this.prisma.msgQuickReply.create({
+    const quickReply = await this.prisma.msgQuickReply.create({
       data: {
-        shortcut: dto.shortcut,
-        title: dto.title,
-        body: dto.body,
+        shortcut: dto.shortcut.trim(),
+        title: dto.title.trim(),
+        body: dto.body.trim(),
         createdBy: userId,
       },
     });
+
+    return {
+      id: quickReply.id,
+      shortcut: quickReply.shortcut,
+      title: quickReply.title,
+      body: quickReply.body,
+      createdAt: quickReply.createdAt,
+    };
   }
 
   async update(id: string, dto: { shortcut?: string; title?: string; body?: string }) {
     await this.ensureExists(id);
 
     if (dto.shortcut !== undefined) {
-      if (!dto.shortcut.startsWith('/')) {
-        throw new BadRequestException('Shortcut must start with /');
-      }
       const existing = await this.prisma.msgQuickReply.findUnique({
-        where: { shortcut: dto.shortcut },
+        where: { shortcut: dto.shortcut.trim() },
       });
       if (existing && existing.id !== id) {
         throw new ConflictException(`Shortcut "${dto.shortcut}" already exists`);
       }
     }
 
-    return this.prisma.msgQuickReply.update({
+    const data: Record<string, unknown> = {};
+    if (dto.shortcut) data.shortcut = dto.shortcut.trim();
+    if (dto.title) data.title = dto.title.trim();
+    if (dto.body) data.body = dto.body.trim();
+
+    const quickReply = await this.prisma.msgQuickReply.update({
       where: { id },
-      data: {
-        ...(dto.shortcut !== undefined && { shortcut: dto.shortcut }),
-        ...(dto.title !== undefined && { title: dto.title }),
-        ...(dto.body !== undefined && { body: dto.body }),
-      },
+      data,
     });
+
+    return {
+      id: quickReply.id,
+      shortcut: quickReply.shortcut,
+      title: quickReply.title,
+      body: quickReply.body,
+      createdAt: quickReply.createdAt,
+    };
   }
 
   async remove(id: string) {
     await this.ensureExists(id);
-    return this.prisma.msgQuickReply.delete({ where: { id } });
+    await this.prisma.msgQuickReply.delete({ where: { id } });
+    return { ok: true };
   }
 
   private async ensureExists(id: string) {

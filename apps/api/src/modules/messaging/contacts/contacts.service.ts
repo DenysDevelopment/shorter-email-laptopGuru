@@ -9,8 +9,8 @@ export class ContactsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(query: SearchContactsDto) {
-    const page = query.page ?? 1;
-    const limit = query.limit ?? 20;
+    const page = Math.max(1, query.page ?? 1);
+    const limit = Math.min(50, Math.max(1, query.limit ?? 25));
     const skip = (page - 1) * limit;
 
     const where: Record<string, unknown> = {};
@@ -18,8 +18,6 @@ export class ContactsService {
     if (query.search) {
       where.OR = [
         { displayName: { contains: query.search, mode: 'insensitive' } },
-        { firstName: { contains: query.search, mode: 'insensitive' } },
-        { lastName: { contains: query.search, mode: 'insensitive' } },
         { company: { contains: query.search, mode: 'insensitive' } },
         {
           channels: {
@@ -36,25 +34,49 @@ export class ContactsService {
       };
     }
 
-    const [data, total] = await Promise.all([
+    const [contacts, total] = await Promise.all([
       this.prisma.contact.findMany({
         where,
-        include: { channels: true },
+        orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        include: {
+          channels: {
+            select: { channelType: true, identifier: true },
+          },
+          _count: {
+            select: { conversations: true },
+          },
+        },
       }),
       this.prisma.contact.count({ where }),
     ]);
 
+    const phoneTypes = ['SMS', 'WHATSAPP'];
+
+    const items = contacts.map((c) => {
+      const emailCh = c.channels.find((ch) => ch.channelType === 'EMAIL');
+      const phoneCh = c.channels.find((ch) => phoneTypes.includes(ch.channelType));
+
+      return {
+        id: c.id,
+        name: c.displayName,
+        email: emailCh?.identifier || null,
+        phone: phoneCh?.identifier || null,
+        avatarUrl: c.avatarUrl,
+        company: c.company,
+        channels: c.channels.map((ch) => ({
+          type: ch.channelType,
+          externalId: ch.identifier,
+        })),
+        conversationCount: c._count.conversations,
+        createdAt: c.createdAt,
+      };
+    });
+
     return {
-      data,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
+      items,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };
   }
 
@@ -62,17 +84,60 @@ export class ContactsService {
     const contact = await this.prisma.contact.findUnique({
       where: { id },
       include: {
-        channels: true,
-        customFields: true,
+        channels: {
+          select: { channelType: true, identifier: true },
+        },
+        customFields: {
+          select: { fieldName: true, fieldValue: true },
+        },
         conversations: {
-          include: { channel: true },
-          orderBy: { lastMessageAt: 'desc' },
-          take: 10,
+          orderBy: { createdAt: 'desc' },
+          take: 20,
+          include: {
+            channel: { select: { type: true } },
+            messages: {
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+              select: { body: true, createdAt: true },
+            },
+          },
         },
       },
     });
     if (!contact) throw new NotFoundException(`Contact ${id} not found`);
-    return contact;
+
+    const emailCh = contact.channels.find((ch) => ch.channelType === 'EMAIL');
+    const phoneCh = contact.channels.find(
+      (ch) => ch.channelType === 'SMS' || ch.channelType === 'WHATSAPP',
+    );
+
+    const customFields: Record<string, string> = {};
+    for (const cf of contact.customFields) {
+      customFields[cf.fieldName] = cf.fieldValue;
+    }
+
+    return {
+      id: contact.id,
+      name: contact.displayName,
+      email: emailCh?.identifier || null,
+      phone: phoneCh?.identifier || null,
+      avatarUrl: contact.avatarUrl,
+      company: contact.company,
+      channels: contact.channels.map((ch) => ({
+        type: ch.channelType,
+        externalId: ch.identifier,
+      })),
+      customFields,
+      conversations: contact.conversations.map((conv) => ({
+        id: conv.id,
+        status: conv.status,
+        channelType: conv.channel.type,
+        lastMessageAt: conv.lastMessageAt,
+        lastMessagePreview: conv.messages[0]?.body?.slice(0, 120) || null,
+        createdAt: conv.createdAt,
+      })),
+      createdAt: contact.createdAt,
+    };
   }
 
   async create(dto: CreateContactDto) {

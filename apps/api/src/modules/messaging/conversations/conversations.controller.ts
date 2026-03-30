@@ -8,15 +8,22 @@ import {
   Param,
   Query,
   UseGuards,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../../common/decorators/permissions.decorator';
-import { CurrentUser, JwtUser } from '../../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  JwtUser,
+} from '../../../common/decorators/current-user.decorator';
 import { ConversationsService } from './conversations.service';
 import { ListConversationsDto } from './dto/list-conversations.dto';
 import { UpdateConversationDto } from './dto/update-conversation.dto';
+import { AssignConversationDto } from './dto/assign-conversation.dto';
+import { ConversationTagDto } from './dto/conversation-tag.dto';
 
 @ApiTags('Conversations')
 @ApiBearerAuth()
@@ -27,8 +34,8 @@ export class ConversationsController {
 
   @Get()
   @RequirePermissions('messaging:conversations:read')
-  findAll(@Query() query: ListConversationsDto) {
-    return this.conversationsService.findAll(query);
+  findAll(@Query() query: ListConversationsDto, @CurrentUser() user: JwtUser) {
+    return this.conversationsService.findAll(query, user.id);
   }
 
   @Get(':id')
@@ -44,28 +51,49 @@ export class ConversationsController {
   }
 
   @Post(':id/assign')
-  @RequirePermissions('messaging:conversations:write')
+  @HttpCode(HttpStatus.CREATED)
+  @RequirePermissions('messaging:conversations:assign')
   assign(
     @Param('id') id: string,
-    @Body() body: { userId: string },
+    @Body() dto: AssignConversationDto,
     @CurrentUser() user: JwtUser,
   ) {
-    return this.conversationsService.assign(id, body.userId, user.id);
+    return this.conversationsService.assign(id, dto.assigneeId, user.id);
+  }
+
+  @Post(':id/read')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions('messaging:conversations:read')
+  markAsRead(@Param('id') id: string) {
+    return this.conversationsService.markAsRead(id);
   }
 
   @Post(':id/tags')
-  @RequirePermissions('messaging:conversations:write')
+  @HttpCode(HttpStatus.CREATED)
+  @RequirePermissions('messaging:tags:manage')
   addTag(
     @Param('id') id: string,
-    @Body() body: { tagId: string },
+    @Body() dto: ConversationTagDto,
     @CurrentUser() user: JwtUser,
   ) {
-    return this.conversationsService.addTag(id, body.tagId, user.id);
+    return this.conversationsService.addTag(id, dto.tagId, user.id);
   }
 
   @Delete(':id/tags/:tagId')
-  @RequirePermissions('messaging:conversations:write')
+  @RequirePermissions('messaging:tags:manage')
   removeTag(@Param('id') id: string, @Param('tagId') tagId: string) {
     return this.conversationsService.removeTag(id, tagId);
+  }
+
+  @Get(':id/notes')
+  @RequirePermissions('messaging:notes:read')
+  getNotes(@Param('id') id: string) {
+    return this.conversationsService.getNotes(id);
+  }
+
+  @Get(':id/lead-data')
+  @RequirePermissions('messaging:conversations:read')
+  getLeadData(@Param('id') id: string) {
+    return this.conversationsService.getLeadData(id);
   }
 }

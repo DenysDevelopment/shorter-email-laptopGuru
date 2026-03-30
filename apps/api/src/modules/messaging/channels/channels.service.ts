@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  Logger,
+} from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { ProviderRegistryService } from '../providers/provider-registry.service';
 import { CreateChannelDto, ChannelConfigItemDto } from './dto/create-channel.dto';
@@ -6,16 +12,26 @@ import { UpdateChannelDto } from './dto/update-channel.dto';
 
 @Injectable()
 export class ChannelsService {
+  private readonly logger = new Logger(ChannelsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly providerRegistry: ProviderRegistryService,
   ) {}
 
   async findAll() {
-    return this.prisma.channel.findMany({
+    const channels = await this.prisma.channel.findMany({
       include: { config: { select: { id: true, key: true, value: true, isSecret: true } } },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'asc' },
     });
+
+    return channels.map((ch) => ({
+      ...ch,
+      config: ch.config.map((c) => ({
+        ...c,
+        value: c.isSecret ? '••••••••' : c.value,
+      })),
+    }));
   }
 
   async findOne(id: string) {
@@ -31,13 +47,42 @@ export class ChannelsService {
       ...channel,
       config: channel.config.map((c) => ({
         ...c,
-        value: c.isSecret ? '********' : c.value,
+        value: c.isSecret ? '••••••••' : c.value,
       })),
     };
   }
 
   async create(dto: CreateChannelDto) {
-    return this.prisma.channel.create({
+    // Check for duplicate EMAIL channel by username
+    if (dto.type === 'EMAIL' && dto.config?.length) {
+      const username = dto.config.find((c) => c.key === 'username')?.value;
+      if (username) {
+        const allEmailChannels = await this.prisma.channel.findMany({
+          where: { type: 'EMAIL' },
+          include: { config: true },
+        });
+        for (const ch of allEmailChannels) {
+          const chUsername = ch.config.find((c) => c.key === 'username')?.value;
+          if (chUsername === username) {
+            throw new ConflictException(
+              `Channel with username ${username} already exists`,
+            );
+          }
+        }
+      }
+    }
+
+    // Check duplicate by name + type
+    const existingByName = await this.prisma.channel.findFirst({
+      where: { name: dto.name, type: dto.type },
+    });
+    if (existingByName) {
+      throw new ConflictException(
+        `Channel "${dto.name}" of this type already exists`,
+      );
+    }
+
+    const channel = await this.prisma.channel.create({
       data: {
         name: dto.name,
         type: dto.type,
@@ -52,24 +97,84 @@ export class ChannelsService {
             }
           : undefined,
       },
-      include: { config: true },
+      include: {
+        config: { select: { id: true, key: true, value: true, isSecret: true } },
+      },
     });
+
+    // Auto-register Telegram webhook
+    if (dto.type === 'TELEGRAM') {
+      const botToken = dto.config?.find((c) => c.key === 'bot_token')?.value;
+      if (botToken) {
+        const appUrl = process.env.APP_URL || '';
+        const webhookUrl = `${appUrl}/api/messaging/webhooks/telegram`;
+        const webhookSecret = randomUUID().replace(/-/g, '');
+        try {
+          const res = await fetch(
+            `https://api.telegram.org/bot${botToken}/setWebhook`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                url: webhookUrl,
+                secret_token: webhookSecret,
+              }),
+            },
+          );
+          const result = await res.json();
+          if (!result.ok) {
+            this.logger.error(
+              `[Telegram] setWebhook failed: ${result.description}`,
+            );
+          }
+
+          // Save webhook URL and secret to config
+          await this.prisma.channelConfig.createMany({
+            data: [
+              { channelId: channel.id, key: 'webhook_url', value: webhookUrl },
+              {
+                channelId: channel.id,
+                key: 'webhook_secret',
+                value: webhookSecret,
+                isSecret: true,
+              },
+            ],
+          });
+        } catch (err) {
+          this.logger.error('[Telegram] Failed to set webhook', err);
+        }
+      }
+    }
+
+    return channel;
   }
 
   async update(id: string, dto: UpdateChannelDto) {
     await this.ensureExists(id);
-    return this.prisma.channel.update({
+
+    const channel = await this.prisma.channel.update({
       where: { id },
       data: {
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       },
-      include: { config: true },
+      include: {
+        config: { select: { id: true, key: true, value: true, isSecret: true } },
+      },
     });
+
+    return {
+      ...channel,
+      config: channel.config.map((c) => ({
+        ...c,
+        value: c.isSecret ? '••••••••' : c.value,
+      })),
+    };
   }
 
   async remove(id: string) {
     await this.ensureExists(id);
+    await this.prisma.channelConfig.deleteMany({ where: { channelId: id } });
     return this.prisma.channel.delete({ where: { id } });
   }
 

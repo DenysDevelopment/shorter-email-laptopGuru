@@ -1,6 +1,8 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
+import * as fs from 'fs';
+import * as path from 'path';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { ProviderRegistryService } from '../providers/provider-registry.service';
 import {
@@ -10,6 +12,8 @@ import {
   WebhookEventStatus,
 } from '../../../generated/prisma';
 import { NotificationsService } from '../notifications/notifications.service';
+
+const AVATARS_DIR = path.join(process.cwd(), 'public', 'uploads', 'avatars');
 
 export interface InboundJobData {
   webhookEventId: string;
@@ -64,6 +68,12 @@ export class InboundProcessor extends WorkerHost {
         throw new Error(`No active channel found for type ${channelType}`);
       }
 
+      // Get bot token from channel config (needed for Telegram avatar fetching)
+      const channelConfig = await this.prisma.channelConfig.findMany({
+        where: { channelId: channel.id },
+      });
+      const botToken = channelConfig.find((c) => c.key === 'bot_token')?.value;
+
       // Find or create ContactChannel + Contact
       let contactChannel = await this.prisma.contactChannel.findUnique({
         where: {
@@ -80,6 +90,8 @@ export class InboundProcessor extends WorkerHost {
         const contact = await this.prisma.contact.create({
           data: {
             displayName: parsed.senderDisplayName ?? parsed.senderIdentifier,
+            firstName: parsed.senderFirstName ?? null,
+            lastName: parsed.senderLastName ?? null,
           },
         });
 
@@ -88,7 +100,9 @@ export class InboundProcessor extends WorkerHost {
             contactId: contact.id,
             channelType,
             identifier: parsed.senderIdentifier,
-            displayName: parsed.senderDisplayName,
+            displayName: parsed.senderUsername
+              ? `@${parsed.senderUsername}`
+              : parsed.senderDisplayName,
             isPrimary: true,
           },
           include: { contact: true },
@@ -97,18 +111,68 @@ export class InboundProcessor extends WorkerHost {
         this.logger.log(
           `Created new contact ${contact.id} for ${parsed.senderIdentifier}`,
         );
-      } else if (
-        parsed.senderDisplayName &&
-        parsed.senderDisplayName !== contactChannel.displayName
-      ) {
-        // Update display name if changed
-        await this.prisma.contactChannel.update({
-          where: { id: contactChannel.id },
-          data: { displayName: parsed.senderDisplayName },
-        });
+
+        // Fetch avatar for new Telegram contacts
+        if (
+          channelType === ChannelType.TELEGRAM &&
+          botToken &&
+          parsed.senderUserId
+        ) {
+          const avatarUrl = await this.fetchTelegramAvatar(
+            botToken,
+            parsed.senderUserId,
+            contact.id,
+          );
+          if (avatarUrl) {
+            await this.prisma.contact.update({
+              where: { id: contact.id },
+              data: { avatarUrl },
+            });
+            // Refresh contactChannel to get updated contact
+            contactChannel = await this.prisma.contactChannel.findUnique({
+              where: { id: contactChannel.id },
+              include: { contact: true },
+            });
+          }
+        }
+      } else {
+        if (
+          parsed.senderDisplayName &&
+          parsed.senderDisplayName !== contactChannel.displayName
+        ) {
+          // Update display name if changed
+          await this.prisma.contactChannel.update({
+            where: { id: contactChannel.id },
+            data: {
+              displayName: parsed.senderUsername
+                ? `@${parsed.senderUsername}`
+                : parsed.senderDisplayName,
+            },
+          });
+        }
+
+        // Fetch avatar for existing Telegram contacts without one
+        if (
+          channelType === ChannelType.TELEGRAM &&
+          !contactChannel.contact.avatarUrl &&
+          botToken &&
+          parsed.senderUserId
+        ) {
+          const avatarUrl = await this.fetchTelegramAvatar(
+            botToken,
+            parsed.senderUserId,
+            contactChannel.contact.id,
+          );
+          if (avatarUrl) {
+            await this.prisma.contact.update({
+              where: { id: contactChannel.contact.id },
+              data: { avatarUrl },
+            });
+          }
+        }
       }
 
-      const contact = contactChannel.contact;
+      const contact = contactChannel!.contact;
 
       // Find or create conversation
       let conversation = await this.findExistingConversation(
@@ -219,6 +283,61 @@ export class InboundProcessor extends WorkerHost {
       });
 
       throw error; // Re-throw for BullMQ retry
+    }
+  }
+
+  /**
+   * Fetch Telegram user profile photo and save locally.
+   */
+  private async fetchTelegramAvatar(
+    botToken: string,
+    userId: number,
+    contactId: string,
+  ): Promise<string | null> {
+    try {
+      const res = await fetch(
+        `https://api.telegram.org/bot${botToken}/getUserProfilePhotos?user_id=${userId}&limit=1`,
+      );
+      const data = (await res.json()) as {
+        ok: boolean;
+        result?: { photos?: Array<Array<{ file_id: string }>> };
+      };
+      if (!data.ok || !data.result?.photos?.length) return null;
+
+      const photo = data.result.photos[0];
+      // Get the largest size
+      const fileInfo = photo[photo.length - 1];
+      if (!fileInfo?.file_id) return null;
+
+      const fileRes = await fetch(
+        `https://api.telegram.org/bot${botToken}/getFile?file_id=${fileInfo.file_id}`,
+      );
+      const fileData = (await fileRes.json()) as {
+        ok: boolean;
+        result?: { file_path?: string };
+      };
+      if (!fileData.ok || !fileData.result?.file_path) return null;
+
+      const imageUrl = `https://api.telegram.org/file/bot${botToken}/${fileData.result.file_path}`;
+      const imageRes = await fetch(imageUrl);
+      if (!imageRes.ok) return null;
+
+      const buffer = Buffer.from(await imageRes.arrayBuffer());
+      const ext = fileData.result.file_path.split('.').pop() || 'jpg';
+      const fileName = `${contactId}.${ext}`;
+
+      fs.mkdirSync(AVATARS_DIR, { recursive: true });
+      fs.writeFileSync(path.join(AVATARS_DIR, fileName), buffer);
+
+      this.logger.log(
+        `Saved Telegram avatar for contact ${contactId}: ${fileName}`,
+      );
+      return `/uploads/avatars/${fileName}`;
+    } catch (err) {
+      this.logger.error(
+        `Failed to fetch Telegram avatar for user ${userId}: ${err}`,
+      );
+      return null;
     }
   }
 

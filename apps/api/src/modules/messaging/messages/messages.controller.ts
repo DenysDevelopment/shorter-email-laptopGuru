@@ -24,7 +24,7 @@ export class MessagesController {
   constructor(private readonly messagesService: MessagesService) {}
 
   @Get()
-  @RequirePermissions('messaging:messages:read')
+  @RequirePermissions('messaging:conversations:read')
   findAll(
     @Param('conversationId') conversationId: string,
     @Query() query: ListMessagesDto,
@@ -33,7 +33,7 @@ export class MessagesController {
   }
 
   @Post()
-  @RequirePermissions('messaging:messages:write')
+  @RequirePermissions('messaging:messages:send')
   send(
     @Param('conversationId') conversationId: string,
     @Body() dto: SendMessageDto,

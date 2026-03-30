@@ -24,6 +24,10 @@ export class ListConversationsDto {
   assigneeId?: string;
 
   @IsOptional()
+  @IsString()
+  search?: string;
+
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
   @Transform(({ value }) =>
@@ -41,6 +45,6 @@ export class ListConversationsDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
-  limit?: number = 20;
+  @Max(50)
+  limit?: number = 30;
 }

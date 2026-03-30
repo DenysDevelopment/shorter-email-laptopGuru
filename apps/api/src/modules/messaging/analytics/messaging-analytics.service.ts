@@ -7,62 +7,104 @@ export class MessagingAnalyticsService {
 
   async getOverview(from?: string, to?: string) {
     const dateFilter = this.buildDateFilter(from, to);
+    const hasDateFilter = !!(from || to);
 
-    const [totalConversations, totalMessages, byStatus] = await Promise.all([
-      this.prisma.conversation.count({ where: { createdAt: dateFilter } }),
-      this.prisma.message.count({ where: { createdAt: dateFilter } }),
-      this.prisma.conversation.groupBy({
-        by: ['status'],
-        _count: { id: true },
-        where: { createdAt: dateFilter },
+    const conversationWhere = hasDateFilter ? { createdAt: dateFilter } : {};
+
+    const [
+      totalConversations,
+      openConversations,
+      closedConversations,
+      totalMessages,
+      newContacts,
+    ] = await Promise.all([
+      this.prisma.conversation.count({ where: conversationWhere }),
+      this.prisma.conversation.count({
+        where: {
+          status: { in: ['NEW', 'OPEN', 'WAITING_REPLY'] },
+          ...conversationWhere,
+        },
+      }),
+      this.prisma.conversation.count({
+        where: {
+          status: { in: ['CLOSED', 'RESOLVED'] },
+          ...conversationWhere,
+        },
+      }),
+      this.prisma.message.count({
+        where: hasDateFilter ? { createdAt: dateFilter } : {},
+      }),
+      this.prisma.contact.count({
+        where: hasDateFilter ? { createdAt: dateFilter } : {},
       }),
     ]);
+
+    // Calculate avg response time from analytics table
+    let avgResponseTime = 0;
+    if (hasDateFilter) {
+      const responseStats = await this.prisma.analyticsResponseTime.aggregate({
+        where: { date: dateFilter },
+        _avg: { avgResponseMs: true },
+      });
+      avgResponseTime = (responseStats._avg.avgResponseMs || 0) / 1000;
+    }
 
     return {
       totalConversations,
       totalMessages,
-      byStatus: byStatus.map((s) => ({
-        status: s.status,
-        count: s._count.id,
-      })),
+      avgResponseTime,
+      openConversations,
+      closedConversations,
+      newContacts,
     };
   }
 
   async getByChannel(from?: string, to?: string) {
     const dateFilter = this.buildDateFilter(from, to);
+    const hasDateFilter = !!(from || to);
+    const dateWhere = hasDateFilter ? { date: dateFilter } : {};
 
-    const [messageCounts, conversationCounts] = await Promise.all([
-      this.prisma.analyticsMessageDaily.groupBy({
-        by: ['channelType'],
-        _sum: { count: true },
-        where: { date: dateFilter },
-      }),
+    const [convByChannel, msgByChannel, rtByChannel] = await Promise.all([
       this.prisma.analyticsConversationDaily.groupBy({
         by: ['channelType'],
+        where: dateWhere,
         _sum: { count: true },
-        where: { date: dateFilter },
+      }),
+      this.prisma.analyticsMessageDaily.groupBy({
+        by: ['channelType'],
+        where: dateWhere,
+        _sum: { count: true },
+      }),
+      this.prisma.analyticsResponseTime.groupBy({
+        by: ['channelType'],
+        where: dateWhere,
+        _avg: { avgResponseMs: true },
       }),
     ]);
 
-    const channelMap = new Map<string, { messages: number; conversations: number }>();
+    // Merge all stats by channel type
+    const channelTypes = new Set<string>();
+    convByChannel.forEach((c) => channelTypes.add(c.channelType));
+    msgByChannel.forEach((m) => channelTypes.add(m.channelType));
+    rtByChannel.forEach((r) => channelTypes.add(r.channelType));
 
-    for (const m of messageCounts) {
-      channelMap.set(m.channelType, {
-        messages: m._sum.count ?? 0,
-        conversations: 0,
-      });
-    }
+    const stats = Array.from(channelTypes).map((channelType) => {
+      const conv = convByChannel.find((c) => c.channelType === channelType);
+      const msg = msgByChannel.find((m) => m.channelType === channelType);
+      const rt = rtByChannel.find((r) => r.channelType === channelType);
 
-    for (const c of conversationCounts) {
-      const existing = channelMap.get(c.channelType) ?? { messages: 0, conversations: 0 };
-      existing.conversations = c._sum.count ?? 0;
-      channelMap.set(c.channelType, existing);
-    }
+      return {
+        channelType,
+        conversations: conv?._sum.count || 0,
+        messages: msg?._sum.count || 0,
+        avgResponseTime: (rt?._avg.avgResponseMs || 0) / 1000,
+      };
+    });
 
-    return Array.from(channelMap.entries()).map(([channelType, counts]) => ({
-      channelType,
-      ...counts,
-    }));
+    // Sort by conversations desc
+    stats.sort((a, b) => b.conversations - a.conversations);
+
+    return stats;
   }
 
   async getResponseTimes(from?: string, to?: string, userId?: string) {

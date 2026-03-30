@@ -42,6 +42,10 @@ export class CreateTemplateDto {
   channelId?: string;
 
   @IsOptional()
+  @IsString()
+  channelType?: string;
+
+  @IsOptional()
   @IsEnum(TemplateStatus)
   status?: TemplateStatus;
 
