@@ -1,6 +1,54 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { emitMessagingEvent } from "@/lib/messaging-events";
+import fs from "fs";
+import path from "path";
+
+const AVATARS_DIR = path.join(process.cwd(), "public", "uploads", "avatars");
+
+/**
+ * Fetch Telegram user profile photo and save locally.
+ */
+async function fetchTelegramAvatar(
+  botToken: string,
+  userId: number,
+  contactId: string,
+): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://api.telegram.org/bot${botToken}/getUserProfilePhotos?user_id=${userId}&limit=1`,
+    );
+    const data = await res.json();
+    if (!data.ok || !data.result?.photos?.length) return null;
+
+    const photo = data.result.photos[0];
+    // Get the largest size
+    const fileInfo = photo[photo.length - 1];
+    if (!fileInfo?.file_id) return null;
+
+    const fileRes = await fetch(
+      `https://api.telegram.org/bot${botToken}/getFile?file_id=${fileInfo.file_id}`,
+    );
+    const fileData = await fileRes.json();
+    if (!fileData.ok || !fileData.result?.file_path) return null;
+
+    const imageUrl = `https://api.telegram.org/file/bot${botToken}/${fileData.result.file_path}`;
+    const imageRes = await fetch(imageUrl);
+    if (!imageRes.ok) return null;
+
+    const buffer = Buffer.from(await imageRes.arrayBuffer());
+    const ext = fileData.result.file_path.split(".").pop() || "jpg";
+    const fileName = `${contactId}.${ext}`;
+
+    fs.mkdirSync(AVATARS_DIR, { recursive: true });
+    fs.writeFileSync(path.join(AVATARS_DIR, fileName), buffer);
+
+    return `/uploads/avatars/${fileName}`;
+  } catch (err) {
+    console.error("[TG Avatar] Error:", err);
+    return null;
+  }
+}
 
 /**
  * POST /api/messaging/webhooks/telegram
@@ -55,8 +103,10 @@ export async function POST(request: NextRequest) {
       include: { contact: true },
     });
 
+    const botToken = channel.config.find((c) => c.key === "bot_token")?.value;
+
     if (!contactChannel) {
-      await prisma.contact.create({
+      const newContact = await prisma.contact.create({
         data: {
           displayName: senderName,
           firstName: msg.from?.first_name || null,
@@ -70,6 +120,18 @@ export async function POST(request: NextRequest) {
           },
         },
       });
+
+      // Fetch avatar from Telegram
+      if (botToken && msg.from?.id) {
+        const avatarUrl = await fetchTelegramAvatar(botToken, msg.from.id, newContact.id);
+        if (avatarUrl) {
+          await prisma.contact.update({
+            where: { id: newContact.id },
+            data: { avatarUrl },
+          });
+        }
+      }
+
       contactChannel = await prisma.contactChannel.findUnique({
         where: {
           channelType_identifier: {
@@ -81,6 +143,15 @@ export async function POST(request: NextRequest) {
       });
       if (!contactChannel) {
         return NextResponse.json({ ok: true });
+      }
+    } else if (!contactChannel.contact.avatarUrl && botToken && msg.from?.id) {
+      // Update avatar for existing contact without one
+      const avatarUrl = await fetchTelegramAvatar(botToken, msg.from.id, contactChannel.contact.id);
+      if (avatarUrl) {
+        await prisma.contact.update({
+          where: { id: contactChannel.contact.id },
+          data: { avatarUrl },
+        });
       }
     }
 
