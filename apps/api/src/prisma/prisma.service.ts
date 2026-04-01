@@ -21,6 +21,10 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     await this.client.$disconnect();
   }
 
+  get raw() {
+    return this.client;
+  }
+
   get user() {
     return this.client.user;
   }
@@ -168,6 +172,14 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
 
   get typingIndicator() {
     return this.client.typingIndicator;
+  }
+
+  get company() {
+    return this.client.company;
+  }
+
+  get auditLog() {
+    return this.client.auditLog;
   }
 
   async $queryRaw(query: TemplateStringsArray, ...values: unknown[]) {
