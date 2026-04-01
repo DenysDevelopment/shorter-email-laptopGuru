@@ -53,15 +53,15 @@ export class SuperAdminCompaniesController {
     return this.svc.deactivate(id, user.id);
   }
 
-  @Post(':id/switch')
-  @HttpCode(200)
-  switchTo(@Param('id') id: string, @CurrentUser() user: JwtUser) {
-    return this.svc.switchToCompany(id, user.id);
-  }
-
   @Post('exit')
   @HttpCode(200)
   exit(@CurrentUser() user: JwtUser) {
     return this.svc.exitCompany(user.id);
+  }
+
+  @Post(':id/switch')
+  @HttpCode(200)
+  switchTo(@Param('id') id: string, @CurrentUser() user: JwtUser) {
+    return this.svc.switchToCompany(id, user.id);
   }
 }
