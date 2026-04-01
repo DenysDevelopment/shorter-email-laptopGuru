@@ -16,16 +16,19 @@ const prisma = new PrismaClient({ adapter });
 
 async function main() {
   // 1. SUPER_ADMIN user
+  const superAdminEmail = process.env.SUPER_ADMIN_EMAIL ?? 'denys@shorterlink.app';
+  const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD ?? 'changeme123';
+
   const existingSuperAdmin = await prisma.user.findUnique({
-    where: { email: 'denys@shorterlink.app' },
+    where: { email: superAdminEmail },
   });
   if (existingSuperAdmin) {
     console.log('✅ SUPER_ADMIN already exists, skipping');
   } else {
-    const passwordHash = await bcrypt.hash('changeme123', 10);
+    const passwordHash = await bcrypt.hash(superAdminPassword, 10);
     await prisma.user.create({
       data: {
-        email: 'denys@shorterlink.app',
+        email: superAdminEmail,
         name: 'Denys',
         passwordHash,
         role: 'SUPER_ADMIN',
