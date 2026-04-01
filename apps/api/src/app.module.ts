@@ -16,6 +16,7 @@ import { QuickLinksModule } from './modules/quicklinks/quicklinks.module';
 import { LandingsModule } from './modules/landings/landings.module';
 import { StatsModule } from './modules/stats/stats.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { SuperAdminModule } from './modules/super-admin/super-admin.module';
 import { CompanyGuard } from './common/guards/company.guard';
 
 @Module({
@@ -43,6 +44,7 @@ import { CompanyGuard } from './common/guards/company.guard';
     LandingsModule,
     StatsModule,
     AdminModule,
+    SuperAdminModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
