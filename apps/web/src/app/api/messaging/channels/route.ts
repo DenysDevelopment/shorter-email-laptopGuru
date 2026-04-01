@@ -29,7 +29,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const { error } = await authorize(PERMISSIONS.MESSAGING_CHANNELS_WRITE);
+  const { session, error } = await authorize(PERMISSIONS.MESSAGING_CHANNELS_WRITE);
   if (error) return error;
 
   const body = await request.json();
@@ -113,6 +113,7 @@ export async function POST(request: NextRequest) {
       name,
       type,
       isActive: isActive ?? true,
+      companyId: session.user!.companyId ?? "",
       ...(config && config.length > 0
         ? {
             config: {

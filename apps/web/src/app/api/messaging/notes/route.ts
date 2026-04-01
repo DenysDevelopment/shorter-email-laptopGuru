@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
       conversationId,
       authorId: session.user!.id,
       body: noteBody.trim(),
+      companyId: session.user!.companyId ?? "",
     },
     include: {
       author: { select: { id: true, name: true } },

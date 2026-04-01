@@ -7,6 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ClsService } from 'nestjs-cls';
 
 /* ------------------------------------------------------------------ */
 /*  YouTube helpers (ported from apps/web/src/lib/youtube.ts)          */
@@ -146,7 +147,10 @@ async function fetchVideoInfo(youtubeId: string): Promise<YouTubeVideoInfo> {
 export class VideosService {
   private readonly logger = new Logger(VideosService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cls: ClsService,
+  ) {}
 
   /** List all active videos, newest first. */
   async findAll() {
@@ -176,6 +180,7 @@ export class VideosService {
 
     const info = await fetchVideoInfo(youtubeId);
 
+    const companyId = this.cls.get<string>('companyId');
     return this.prisma.video.create({
       data: {
         youtubeId: info.youtubeId,
@@ -184,6 +189,7 @@ export class VideosService {
         duration: info.duration,
         channelTitle: info.channelTitle,
         userId,
+        companyId,
       },
     });
   }
@@ -228,6 +234,7 @@ export class VideosService {
           continue;
         }
 
+        const videoCompanyId = this.cls.get<string>('companyId');
         await this.prisma.video.create({
           data: {
             youtubeId: video.youtubeId,
@@ -236,6 +243,7 @@ export class VideosService {
             duration: video.duration,
             channelTitle: video.channelTitle,
             userId,
+            companyId: videoCompanyId,
           },
         });
         imported++;

@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Check if slug already exists
-  const existing = await prisma.quickLink.findUnique({ where: { slug } });
+  const existing = await prisma.quickLink.findFirst({ where: { slug, companyId: session.user.companyId ?? "" } });
   if (existing) {
     return NextResponse.json({ error: "Такой slug уже занят" }, { status: 409 });
   }
@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
       targetUrl,
       name: name || null,
       userId: session.user.id,
+      companyId: session.user.companyId ?? "",
     },
   });
 

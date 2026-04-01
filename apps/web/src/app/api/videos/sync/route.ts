@@ -41,6 +41,7 @@ export async function POST() {
           duration: video.duration,
           channelTitle: video.channelTitle,
           userId: session.user.id,
+          companyId: session.user.companyId ?? "",
         },
       });
       imported++;

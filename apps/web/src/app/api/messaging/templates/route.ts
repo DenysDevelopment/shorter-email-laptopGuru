@@ -66,6 +66,7 @@ export async function POST(request: NextRequest) {
       channelId,
       status: "DRAFT",
       createdBy: session.user!.id,
+      companyId: session.user!.companyId ?? "",
       variables: {
         create: variableKeys.map((key: string, idx: number) => ({
           key,

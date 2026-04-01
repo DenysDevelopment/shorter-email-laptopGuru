@@ -69,7 +69,7 @@ export async function POST(
   try {
     // 1. Create landing
     let slug = generateSlug();
-    while (await prisma.landing.findUnique({ where: { slug } })) {
+    while (await prisma.landing.findFirst({ where: { slug } })) {
       slug = generateSlug();
     }
 
@@ -85,6 +85,7 @@ export async function POST(
         productName,
         language: lang,
         userId: session.user.id,
+        companyId: session.user.companyId ?? "",
       },
     });
 
@@ -118,6 +119,7 @@ export async function POST(
         landingId: landing.id,
         userId: session.user.id,
         status: "sent",
+        companyId: session.user.companyId ?? "",
       },
     });
 
@@ -131,6 +133,7 @@ export async function POST(
         body: `Видео-рецензия отправлена: ${video.title}\n${shortUrl}`,
         senderId: session.user.id,
         contactId: conversation.contactId,
+        companyId: session.user.companyId ?? "",
       },
     });
 

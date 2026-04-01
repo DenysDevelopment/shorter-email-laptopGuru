@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
       duration: info.duration,
       channelTitle: info.channelTitle,
       userId: session.user.id,
+      companyId: session.user.companyId ?? "",
     },
   });
 

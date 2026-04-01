@@ -5,6 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ClsService } from 'nestjs-cls';
 import { generateSlug } from '../../common/utils/links';
 import { generateShortCode } from '../../common/utils/links';
 import { sendEmail } from '../../common/utils/smtp';
@@ -29,7 +30,10 @@ interface SendDto {
 export class SendService {
   private readonly logger = new Logger(SendService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cls: ClsService,
+  ) {}
 
   async sendVideoEmail(dto: SendDto, userId: string) {
     const { emailId, videoId, personalNote, buyButtonText, language } = dto;
@@ -59,8 +63,9 @@ export class SendService {
 
     try {
       // 1. Create landing page
+      const companyId = this.cls.get<string>('companyId');
       let slug = generateSlug();
-      while (await this.prisma.landing.findUnique({ where: { slug } })) {
+      while (await this.prisma.landing.findFirst({ where: { slug, companyId } })) {
         slug = generateSlug();
       }
 
@@ -77,6 +82,7 @@ export class SendService {
           language: lang,
           emailId: incomingEmail.id,
           userId,
+          companyId,
         },
       });
 
@@ -86,7 +92,7 @@ export class SendService {
         shortCode = generateShortCode();
       }
       await this.prisma.shortLink.create({
-        data: { code: shortCode, landingId: landing.id },
+        data: { code: shortCode, landingId: landing.id, companyId },
       });
 
       const shortUrl = `${appUrl}/r/${shortCode}`;
@@ -127,6 +133,7 @@ export class SendService {
           userId,
           status,
           errorMessage,
+          companyId,
         },
       });
 

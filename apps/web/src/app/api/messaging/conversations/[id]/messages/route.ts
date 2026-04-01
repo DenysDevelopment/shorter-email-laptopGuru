@@ -104,6 +104,7 @@ export async function POST(
       body: body.body,
       senderId: session.user!.id,
       contactId: conversation.contactId,
+      companyId: session.user!.companyId ?? "",
     },
   });
 

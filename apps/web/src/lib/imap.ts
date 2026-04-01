@@ -9,6 +9,7 @@ interface ImapConfig {
   user: string;
   password: string;
   channelId: string;
+  companyId: string;
 }
 
 function createImapClient(config: ImapConfig) {
@@ -61,22 +62,28 @@ async function syncChannelEmails(config: ImapConfig): Promise<number> {
 
         const extracted = parseEmail(body, subject);
 
-        await prisma.incomingEmail.create({
-          data: {
-            messageId,
-            from,
-            subject,
-            body,
-            receivedAt: parsed.date || new Date(),
-            productUrl: extracted.productUrl,
-            productName: extracted.productName,
-            customerName: extracted.customerName,
-            customerEmail: extracted.customerEmail,
-            customerPhone: extracted.customerPhone,
-            category: extracted.category,
-            channelId: config.channelId,
-          },
-        });
+        try {
+          await prisma.incomingEmail.create({
+            data: {
+              messageId,
+              from,
+              subject,
+              body,
+              receivedAt: parsed.date || new Date(),
+              productUrl: extracted.productUrl,
+              productName: extracted.productName,
+              customerName: extracted.customerName,
+              customerEmail: extracted.customerEmail,
+              customerPhone: extracted.customerPhone,
+              category: extracted.category,
+              channelId: config.channelId,
+              companyId: config.companyId,
+            },
+          });
+        } catch (err: unknown) {
+          if (err && typeof err === "object" && "code" in err && err.code === "P2002") continue;
+          throw err;
+        }
 
         imported++;
       }
@@ -125,6 +132,7 @@ export async function syncEmails(): Promise<number> {
         user: imapUser,
         password: imapPass,
         channelId: channel.id,
+        companyId: channel.companyId,
       });
       totalImported += imported;
     } catch (err) {

@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
   try {
     // 1. Create landing page
     let slug = generateSlug();
-    while (await prisma.landing.findUnique({ where: { slug } })) {
+    while (await prisma.landing.findFirst({ where: { slug, companyId: session.user.companyId ?? "" } })) {
       slug = generateSlug();
     }
 
@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
         language: lang,
         emailId: incomingEmail.id,
         userId: session.user.id,
+        companyId: session.user.companyId ?? "",
       },
     });
 
@@ -108,6 +109,7 @@ export async function POST(request: NextRequest) {
         userId: session.user.id,
         status,
         errorMessage,
+        companyId: session.user.companyId ?? "",
       },
     });
 
