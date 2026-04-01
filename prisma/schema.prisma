@@ -133,7 +133,7 @@ model IncomingEmail {
 
 model Video {
   id            String    @id @default(cuid())
-  youtubeId     String    @unique
+  youtubeId     String
   title         String
   thumbnail     String
   duration      String?
@@ -148,6 +148,7 @@ model Video {
 
   landings      Landing[]
 
+  @@unique([youtubeId, companyId])
   @@index([companyId])
 }
 
