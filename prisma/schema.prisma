@@ -13,8 +13,47 @@ datasource db {
 }
 
 enum Role {
+  SUPER_ADMIN
   ADMIN
   USER
+}
+
+model Company {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  logo        String?
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users              User[]
+  landings           Landing[]
+  videos             Video[]
+  quickLinks         QuickLink[]
+  shortLinks         ShortLink[]
+  sentEmails         SentEmail[]
+  incomingEmails     IncomingEmail[]
+  contacts           Contact[]
+  channels           Channel[]
+  conversations      Conversation[]
+  messages           Message[]
+  tags               Tag[]
+  templates          Template[]
+  msgQuickReplies    MsgQuickReply[]
+  autoReplyRules     AutoReplyRule[]
+  teams              Team[]
+  businessHours      BusinessHoursSchedule[]
+  notifications      Notification[]
+  webhookEvents      WebhookEvent[]
+  outboundJobs       OutboundJob[]
+  analyticsMessages  AnalyticsMessageDaily[]
+  analyticsConvos    AnalyticsConversationDaily[]
+  analyticsResponse  AnalyticsResponseTime[]
+  typingIndicators   TypingIndicator[]
+  internalNotes      InternalNote[]
+  auditLogs          AuditLog[]
 }
 
 model User {
@@ -24,6 +63,9 @@ model User {
   passwordHash  String
   role          Role      @default(USER)
   permissions   String[]  @default([])
+  companyId     String?
+  company       Company?  @relation(fields: [companyId], references: [id])
+  tokenVersion  Int       @default(0)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -46,6 +88,8 @@ model User {
   createdQuickReplies        MsgQuickReply[]             @relation("QuickReplyCreator")
   createdAutoRules           AutoReplyRule[]             @relation("AutoReplyCreator")
   teamMemberships            TeamMember[]                @relation("TeamMembership")
+
+  @@index([companyId])
 }
 
 model IncomingEmail {
@@ -67,6 +111,8 @@ model IncomingEmail {
   processedById String?
   channel       Channel?  @relation(fields: [channelId], references: [id], onDelete: SetNull)
   channelId     String?
+  companyId     String?
+  company       Company?  @relation(fields: [companyId], references: [id])
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -79,6 +125,7 @@ model IncomingEmail {
   @@index([customerEmail, productUrl])
   @@index([receivedAt])
   @@index([channelId])
+  @@index([companyId])
 }
 
 model Video {
@@ -91,10 +138,14 @@ model Video {
   active        Boolean   @default(true)
   addedBy       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId        String
+  companyId     String?
+  company       Company?  @relation(fields: [companyId], references: [id])
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   landings      Landing[]
+
+  @@index([companyId])
 }
 
 model Landing {
@@ -115,6 +166,8 @@ model Landing {
   clicks        Int       @default(0)
   createdBy     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId        String
+  companyId     String?
+  company       Company?  @relation(fields: [companyId], references: [id])
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -125,6 +178,7 @@ model Landing {
 
   @@index([createdAt])
   @@index([userId])
+  @@index([companyId])
 }
 
 model ShortLink {
@@ -133,9 +187,12 @@ model ShortLink {
   landingId     String
   landing       Landing   @relation(fields: [landingId], references: [id], onDelete: Cascade)
   clicks        Int       @default(0)
+  companyId     String?
+  company       Company?  @relation(fields: [companyId], references: [id])
   createdAt     DateTime  @default(now())
 
   @@index([createdAt])
+  @@index([companyId])
 }
 
 model SentEmail {
@@ -146,12 +203,15 @@ model SentEmail {
   landing       Landing   @relation(fields: [landingId], references: [id])
   sentBy        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId        String
+  companyId     String?
+  company       Company?  @relation(fields: [companyId], references: [id])
   status        String    @default("sent")
   errorMessage  String?
   sentAt        DateTime  @default(now())
 
   @@index([sentAt])
   @@index([userId])
+  @@index([companyId])
 }
 
 model QuickLink {
@@ -162,6 +222,8 @@ model QuickLink {
   clicks        Int       @default(0)
   createdBy     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId        String
+  companyId     String?
+  company       Company?  @relation(fields: [companyId], references: [id])
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -170,6 +232,7 @@ model QuickLink {
   @@index([slug])
   @@index([createdAt])
   @@index([userId])
+  @@index([companyId])
 }
 
 model QuickLinkVisit {
@@ -312,6 +375,24 @@ model LandingVisit {
   @@index([sessionId])
 }
 
+// --- Audit Log ---
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  companyId  String?
+  company    Company? @relation(fields: [companyId], references: [id])
+  userId     String?
+  action     String
+  entity     String?
+  entityId   String?
+  meta       Json?
+  createdAt  DateTime @default(now())
+
+  @@index([companyId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
 // ========================================
 // OMNICHANNEL MESSAGING MODULE
 // ========================================
@@ -435,6 +516,8 @@ model Contact {
   company     String?
   jobTitle    String?
   notes       String?
+  companyId   String?
+  tenant      Company? @relation(fields: [companyId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -447,6 +530,7 @@ model Contact {
 
   @@index([displayName])
   @@index([createdAt])
+  @@index([companyId])
 }
 
 model ContactChannel {
@@ -500,6 +584,8 @@ model Channel {
   name      String
   type      ChannelType
   isActive  Boolean     @default(true)
+  companyId String?
+  company   Company?    @relation(fields: [companyId], references: [id])
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
@@ -511,6 +597,7 @@ model Channel {
   incomingEmails IncomingEmail[]
 
   @@index([type])
+  @@index([companyId])
 }
 
 model ChannelConfig {
@@ -539,6 +626,8 @@ model Conversation {
   externalId    String?
   lastMessageAt DateTime?
   closedAt      DateTime?
+  companyId     String?
+  company       Company?             @relation(fields: [companyId], references: [id])
   createdAt     DateTime             @default(now())
   updatedAt     DateTime             @updatedAt
 
@@ -554,6 +643,7 @@ model Conversation {
   @@index([priority])
   @@index([lastMessageAt])
   @@index([createdAt])
+  @@index([companyId])
 }
 
 model ConversationTag {
@@ -619,6 +709,8 @@ model Message {
   senderUser     User?              @relation("MessageSender", fields: [senderId], references: [id])
   contactId      String?
   contact        Contact?           @relation("MessageContact", fields: [contactId], references: [id])
+  companyId      String?
+  company        Company?           @relation(fields: [companyId], references: [id])
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
@@ -632,6 +724,7 @@ model Message {
   @@index([direction])
   @@index([createdAt])
   @@index([externalId])
+  @@index([companyId])
 }
 
 model MessageStatusEvent {
@@ -692,11 +785,14 @@ model InternalNote {
   authorId       String
   author         User         @relation("NoteAuthor", fields: [authorId], references: [id])
   body           String
+  companyId      String?
+  company        Company?     @relation(fields: [companyId], references: [id])
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
   @@index([conversationId])
   @@index([authorId])
+  @@index([companyId])
 }
 
 // --- Tags ---
@@ -705,9 +801,13 @@ model Tag {
   id        String   @id @default(cuid())
   name      String   @unique
   color     String?
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
   createdAt DateTime @default(now())
 
   conversations ConversationTag[]
+
+  @@index([companyId])
 }
 
 // --- Templates & Quick Replies ---
@@ -723,6 +823,8 @@ model Template {
   language   String         @default("pl")
   createdBy  String
   createdByUser User        @relation("TemplateCreator", fields: [createdBy], references: [id])
+  companyId  String?
+  company    Company?       @relation(fields: [companyId], references: [id])
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
 
@@ -730,6 +832,7 @@ model Template {
 
   @@index([channelId])
   @@index([status])
+  @@index([companyId])
 }
 
 model TemplateVariable {
@@ -752,8 +855,12 @@ model MsgQuickReply {
   body      String
   createdBy String
   createdByUser User @relation("QuickReplyCreator", fields: [createdBy], references: [id])
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([companyId])
 }
 
 // --- Auto-Reply Rules ---
@@ -769,12 +876,15 @@ model AutoReplyRule {
   priority     Int              @default(0)
   createdBy    String
   createdByUser User            @relation("AutoReplyCreator", fields: [createdBy], references: [id])
+  companyId    String?
+  company      Company?         @relation(fields: [companyId], references: [id])
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
   @@index([channelId])
   @@index([trigger])
   @@index([isActive])
+  @@index([companyId])
 }
 
 // --- Teams ---
@@ -783,10 +893,14 @@ model Team {
   id          String   @id @default(cuid())
   name        String   @unique
   description String?
+  companyId   String?
+  company     Company? @relation(fields: [companyId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   members TeamMember[]
+
+  @@index([companyId])
 }
 
 model TeamMember {
@@ -810,10 +924,14 @@ model BusinessHoursSchedule {
   name      String   @unique
   timezone  String   @default("Europe/Warsaw")
   isDefault Boolean  @default(false)
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   slots BusinessHoursSlot[]
+
+  @@index([companyId])
 }
 
 model BusinessHoursSlot {
@@ -841,10 +959,13 @@ model Notification {
   conversationId String?
   messageId      String?
   isRead         Boolean          @default(false)
+  companyId      String?
+  company        Company?         @relation(fields: [companyId], references: [id])
   createdAt      DateTime         @default(now())
 
   @@index([userId, isRead])
   @@index([createdAt])
+  @@index([companyId])
 }
 
 // --- Webhook Events ---
@@ -858,11 +979,14 @@ model WebhookEvent {
   error       String?
   attempts    Int                @default(0)
   processedAt DateTime?
+  companyId   String?
+  company     Company?           @relation(fields: [companyId], references: [id])
   createdAt   DateTime           @default(now())
 
   @@unique([channelType, externalId])
   @@index([status])
   @@index([createdAt])
+  @@index([companyId])
 }
 
 // --- Outbound Job Queue ---
@@ -880,6 +1004,8 @@ model OutboundJob {
   scheduledAt DateTime    @default(now())
   startedAt   DateTime?
   completedAt DateTime?
+  companyId   String?
+  company     Company?    @relation(fields: [companyId], references: [id])
   createdAt   DateTime    @default(now())
 
   logs OutboundJobLog[]
@@ -887,6 +1013,7 @@ model OutboundJob {
   @@index([status])
   @@index([scheduledAt])
   @@index([channelType])
+  @@index([companyId])
 }
 
 model OutboundJobLog {
@@ -910,10 +1037,13 @@ model AnalyticsMessageDaily {
   channelType ChannelType
   direction   MessageDirection
   count       Int              @default(0)
+  companyId   String?
+  company     Company?         @relation(fields: [companyId], references: [id])
 
   @@unique([date, channelType, direction])
   @@index([date])
   @@index([date, channelType])
+  @@index([companyId])
 }
 
 model AnalyticsConversationDaily {
@@ -922,10 +1052,13 @@ model AnalyticsConversationDaily {
   channelType ChannelType
   status      ConversationStatus
   count       Int                @default(0)
+  companyId   String?
+  company     Company?           @relation(fields: [companyId], references: [id])
 
   @@unique([date, channelType, status])
   @@index([date])
   @@index([date, channelType])
+  @@index([companyId])
 }
 
 model AnalyticsResponseTime {
@@ -937,11 +1070,14 @@ model AnalyticsResponseTime {
   medianResponseMs Int?
   p95ResponseMs    Int?
   sampleCount      Int         @default(0)
+  companyId        String?
+  company          Company?    @relation(fields: [companyId], references: [id])
 
   @@unique([date, userId, channelType])
   @@index([date])
   @@index([userId])
   @@index([date, channelType])
+  @@index([companyId])
 }
 
 // --- Typing Indicators ---
@@ -952,9 +1088,12 @@ model TypingIndicator {
   userId         String?
   contactId      String?
   isTyping       Boolean  @default(true)
+  companyId      String?
+  company        Company? @relation(fields: [companyId], references: [id])
   updatedAt      DateTime @updatedAt
 
   @@unique([conversationId, userId])
   @@unique([conversationId, contactId])
   @@index([conversationId])
+  @@index([companyId])
 }
