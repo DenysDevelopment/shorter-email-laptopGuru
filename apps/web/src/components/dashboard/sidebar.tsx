@@ -341,9 +341,9 @@ export function Sidebar() {
 
 					{/* User section */}
 					<div className='border-t border-gray-100 p-4'>
-						{(session?.user as unknown as Record<string, unknown>)?.companyName && (
+						{String((session?.user as unknown as Record<string, unknown>)?.companyName ?? '') !== '' && (
 							<p className='text-[11px] font-semibold text-brand/70 uppercase tracking-widest mb-2 truncate'>
-								{(session?.user as unknown as Record<string, unknown>)?.companyName as string}
+								{String((session?.user as unknown as Record<string, unknown>)?.companyName)}
 							</p>
 						)}
 						<div className='flex items-center gap-3'>
