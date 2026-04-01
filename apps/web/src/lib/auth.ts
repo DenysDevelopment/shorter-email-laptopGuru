@@ -29,6 +29,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             permissions: true,
             companyId: true,
             tokenVersion: true,
+            company: { select: { name: true } },
           },
         });
 
@@ -44,6 +45,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           role: user.role,
           permissions: user.permissions,
           companyId: user.companyId ?? null,
+          companyName: user.company?.name ?? null,
           tokenVersion: user.tokenVersion,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any;

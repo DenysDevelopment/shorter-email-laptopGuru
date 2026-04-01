@@ -71,6 +71,7 @@ export const authConfig: NextAuthConfig = {
         token.role = u.role ?? 'USER';
         token.permissions = u.permissions ?? [];
         token.companyId = u.companyId ?? null;
+        token.companyName = u.companyName ?? null;
         token.tokenVersion = u.tokenVersion ?? 0;
       }
       return token;
@@ -82,6 +83,7 @@ export const authConfig: NextAuthConfig = {
         u.role = token.role as string;
         u.permissions = token.permissions as string[];
         u.companyId = token.companyId as string | null;
+        u.companyName = token.companyName as string | null;
       }
       return session;
     },

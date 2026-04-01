@@ -199,7 +199,7 @@ export function Sidebar() {
 					const channels = (data.channels || []).filter(
 						(ch: { type: string; isActive: boolean }) => ch.type === 'EMAIL' && ch.isActive
 					);
-					// eslint-disable-next-line react-hooks/set-state-in-effect
+					 
 					setEmailChannels(channels);
 				}
 			} catch {}
@@ -341,6 +341,11 @@ export function Sidebar() {
 
 					{/* User section */}
 					<div className='border-t border-gray-100 p-4'>
+						{(session?.user as unknown as Record<string, unknown>)?.companyName && (
+							<p className='text-[11px] font-semibold text-brand/70 uppercase tracking-widest mb-2 truncate'>
+								{(session?.user as unknown as Record<string, unknown>)?.companyName as string}
+							</p>
+						)}
 						<div className='flex items-center gap-3'>
 							<div className='flex-1 min-w-0'>
 								<p className='text-sm font-medium text-gray-900 truncate'>
