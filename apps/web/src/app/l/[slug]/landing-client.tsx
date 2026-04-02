@@ -686,118 +686,137 @@ export function LandingClient({ landing, video }: Props) {
   }
 
   return (
-    <div className={`min-h-screen bg-gray-50 ${lato.className}`}>
-      {/* Hero */}
-      <div className="bg-gradient-to-br from-[#fb7830] to-[#fbbf24] pb-20 pt-8 px-4">
-        <div className="max-w-3xl mx-auto text-center">
-          <Image src="/LG_logo2.webp" alt="Laptop Guru" width={100} height={33} className="mx-auto mb-4 brightness-0 invert w-auto h-auto" />
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3">
-            {tr.greeting}{landing.customerName ? `, ${landing.customerName}` : ""}!
-          </h1>
-          <p className="text-lg text-white/90">
-            {tr.intro}
-          </p>
-        </div>
+    <div className={`min-h-screen bg-[#f5f5f5] flex flex-col ${lato.className}`} style={{ margin: 0, padding: 0 }}>
+      <div className="flex-1 pb-28">
+
+            {/* Header — email-style gradient */}
+            <div className="py-8 px-6 text-center" style={{ background: 'linear-gradient(135deg, #fb7830 0%, #f59e0b 100%)' }}>
+              <Image src="/LG_logo2.webp" alt="Laptop Guru" width={160} height={56} className="mx-auto mb-2.5 w-auto" style={{ height: 56, filter: 'brightness(0) invert(1)' }} />
+              <p className="text-[11px] uppercase tracking-[2px] font-semibold m-0" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                {tr.badge}
+              </p>
+            </div>
+
+            {/* Body */}
+            <div className="bg-white">
+              <div className="max-w-3xl mx-auto px-6 pt-8">
+                <p className="text-3xl sm:text-4xl font-bold text-[#222] leading-tight mb-4">
+                  {tr.greeting}{landing.customerName ? `, ${landing.customerName}` : ""}!
+                </p>
+                <p className="text-base text-[#555] leading-relaxed mb-6">
+                  {tr.intro}
+                </p>
+              </div>
+
+              {/* Personal note */}
+              {landing.personalNote && (
+                <div className="max-w-3xl mx-auto px-6 pb-6">
+                  <div className="bg-[#fff8f0] border-l-4 border-[#fb7830] rounded-r-lg p-4">
+                    <p className="text-[15px] text-[#555] leading-relaxed italic m-0">
+                      {landing.personalNote}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Video */}
+              <div className="max-w-3xl mx-auto px-6 pb-2">
+                <div className="relative aspect-video rounded-xl overflow-hidden bg-gray-900">
+                  <iframe
+                    id="yt-player"
+                    src={`https://www.youtube.com/embed/${video.youtubeId}?rel=0&enablejsapi=1`}
+                    title={video.title}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="absolute inset-0 w-full h-full"
+                  />
+                </div>
+              </div>
+              <div className="max-w-3xl mx-auto px-6 pb-6">
+                <p className="text-[15px] font-semibold text-[#333] leading-snug m-0">
+                  {video.title}
+                </p>
+              </div>
+
+              {/* CTA button */}
+              {landing.productUrl && (
+                <div className="max-w-3xl mx-auto px-6 pb-8 text-center">
+                  <button
+                    onClick={handleBuyClick}
+                    className="cursor-pointer group relative inline-block bg-gradient-to-br from-[#fb7830] to-[#e56a25] hover:from-[#e56a25] hover:to-[#d45a15] text-white text-lg font-bold py-4 px-12 rounded-xl shadow-[0_4px_16px_rgba(251,120,48,0.35)] hover:shadow-[0_6px_24px_rgba(251,120,48,0.5)] transition-all active:scale-[0.98] tracking-wide overflow-hidden"
+                  >
+                    <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                    <span className="relative">{landing.buyButtonText}</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Benefits — 3 columns, email-style */}
+              <div className="max-w-3xl mx-auto px-6 pb-8">
+                <div className="rounded-2xl overflow-hidden p-5" style={{ backgroundColor: '#f3ede8' }}>
+                  <div className="flex">
+                    <div className="flex-1 text-center px-2">
+                      <img src="https://www.laptopguru.pl/cdn/shop/files/gg2.png?v=1767364526&width=400" alt="" className="block mx-auto mb-2" style={{ height: 40 }} />
+                      <p className="text-sm font-bold text-[#333] m-0">{tr.trustWarranty}</p>
+                    </div>
+                    <div className="flex-1 text-center px-2">
+                      <img src="https://www.laptopguru.pl/cdn/shop/files/dd1.png?v=1767364860&width=400" alt="" className="block mx-auto mb-2" style={{ height: 40 }} />
+                      <p className="text-sm font-bold text-[#333] m-0">{tr.trustDelivery}</p>
+                    </div>
+                    <div className="flex-1 text-center px-2">
+                      <img src="https://www.laptopguru.pl/cdn/shop/files/vv1.png?v=1767365084&width=400" alt="" className="block mx-auto mb-2" style={{ height: 40 }} />
+                      <p className="text-sm font-bold text-[#333] m-0">{tr.trustReturn}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Specs */}
+              {specs && (
+                <div className="max-w-3xl mx-auto px-6 pb-8">
+                  <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-[#fb7830]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25h-13.5A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25h-13.5A2.25 2.25 0 0 1 3 12V5.25" />
+                    </svg>
+                    {tr.specsTitle}
+                  </h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {specs.model && <SpecRow icon={<Laptop className="w-5 h-5 text-[#fb7830]" />} label={tr.specModel} value={specs.model} />}
+                    {specs.cpu && <SpecRow icon={<Cpu className="w-5 h-5 text-[#fb7830]" />} label={tr.specCpu} value={specs.cpu} />}
+                    {specs.ram && <SpecRow icon={<MemoryStick className="w-5 h-5 text-[#fb7830]" />} label={tr.specRam} value={specs.ram} />}
+                    {specs.storage && <SpecRow icon={<HardDrive className="w-5 h-5 text-[#fb7830]" />} label={tr.specStorage} value={specs.storage} />}
+                    {specs.gpu && <SpecRow icon={<Monitor className="w-5 h-5 text-[#fb7830]" />} label={tr.specGpu} value={specs.gpu} />}
+                    {specs.display && <SpecRow icon={<MonitorSmartphone className="w-5 h-5 text-[#fb7830]" />} label={tr.specDisplay} value={specs.display} />}
+                  </div>
+                </div>
+              )}
+            </div>
+
       </div>
 
-      {/* Video */}
-      <div className="max-w-3xl mx-auto px-4 -mt-12">
-        <div className="relative aspect-video rounded-2xl overflow-hidden shadow-2xl bg-gray-900">
-          <iframe
-            id="yt-player"
-            src={`https://www.youtube.com/embed/${video.youtubeId}?rel=0&enablejsapi=1`}
-            title={video.title}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            className="absolute inset-0 w-full h-full"
-          />
-        </div>
-        <p className="text-sm text-gray-600 mt-3 text-center">{video.title}</p>
+      {/* Footer — dark, email-style, pushed to bottom */}
+      <div className="py-8 px-6 text-center" style={{ backgroundColor: '#1f2937' }}>
+        <Image src="/LG_logo2.webp" alt="Laptop Guru" width={120} height={40} className="mx-auto mb-2 w-auto" style={{ height: 40, filter: 'brightness(0) invert(1)', opacity: 0.7 }} />
+        <p className="text-xs m-0" style={{ color: 'rgba(255,255,255,0.4)' }}>
+          © {new Date().getFullYear()} laptopguru.pl — {tr.copyright}
+        </p>
       </div>
-
-      <main className="max-w-3xl mx-auto px-4 py-10">
-        {/* Personal note */}
-        {landing.personalNote && (
-          <div className="bg-orange-50 border-l-4 border-[#fb7830] rounded-r-lg p-4 mb-6 italic text-gray-700">
-            {landing.personalNote}
-          </div>
-        )}
-
-        {/* Trust badges */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex flex-col items-center text-center flex-1">
-              <img src="https://www.laptopguru.pl/cdn/shop/files/gg2.png?v=1767364526&width=400" alt="" className="h-10 mb-2" />
-              <span className="text-xs sm:text-sm text-gray-600 font-medium leading-tight">{tr.trustWarranty}</span>
-            </div>
-            <div className="flex flex-col items-center text-center flex-1">
-              <img src="https://www.laptopguru.pl/cdn/shop/files/dd1.png?v=1767364860&width=400" alt="" className="h-10 mb-2" />
-              <span className="text-xs sm:text-sm text-gray-600 font-medium leading-tight">{tr.trustDelivery}</span>
-            </div>
-            <div className="flex flex-col items-center text-center flex-1">
-              <img src="https://www.laptopguru.pl/cdn/shop/files/vv1.png?v=1767365084&width=400" alt="" className="h-10 mb-2" />
-              <span className="text-xs sm:text-sm text-gray-600 font-medium leading-tight">{tr.trustReturn}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Product specs */}
-        {specs && (
-          <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-6 mb-10">
-            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <svg className="w-5 h-5 text-[#fb7830]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25h-13.5A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25h-13.5A2.25 2.25 0 0 1 3 12V5.25" />
-              </svg>
-              {tr.specsTitle}
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {specs.model && (
-                <SpecRow icon={<Laptop className="w-5 h-5 text-brand" />} label={tr.specModel} value={specs.model} />
-              )}
-              {specs.cpu && (
-                <SpecRow icon={<Cpu className="w-5 h-5 text-brand" />} label={tr.specCpu} value={specs.cpu} />
-              )}
-              {specs.ram && (
-                <SpecRow icon={<MemoryStick className="w-5 h-5 text-brand" />} label={tr.specRam} value={specs.ram} />
-              )}
-              {specs.storage && (
-                <SpecRow icon={<HardDrive className="w-5 h-5 text-brand" />} label={tr.specStorage} value={specs.storage} />
-              )}
-              {specs.gpu && (
-                <SpecRow icon={<Monitor className="w-5 h-5 text-brand" />} label={tr.specGpu} value={specs.gpu} />
-              )}
-              {specs.display && (
-                <SpecRow icon={<MonitorSmartphone className="w-5 h-5 text-brand" />} label={tr.specDisplay} value={specs.display} />
-              )}
-            </div>
-          </div>
-        )}
-
-      </main>
 
       {/* Fixed bottom CTA */}
       {landing.productUrl && (
         <div className="fixed bottom-0 inset-x-0 z-50 bg-white/95 backdrop-blur-md border-t border-gray-100 shadow-[0_-4px_24px_rgba(0,0,0,0.1)]">
           <div className="max-w-3xl mx-auto px-4 py-3">
             <button
-                onClick={handleBuyClick}
-                className="cursor-pointer group relative w-full bg-gradient-to-r from-[#fb7830] to-[#e56a25] hover:from-[#e56a25] hover:to-[#d45a15] text-white py-4 rounded-xl text-lg font-bold shadow-[0_4px_20px_rgba(251,120,48,0.4)] hover:shadow-[0_6px_28px_rgba(251,120,48,0.5)] transition-all active:scale-[0.98] overflow-hidden"
-              >
-                {/* Shimmer effect */}
-                <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-                <span className="relative">{landing.buyButtonText}</span>
+              onClick={handleBuyClick}
+              className="cursor-pointer group relative w-full bg-gradient-to-r from-[#fb7830] to-[#e56a25] hover:from-[#e56a25] hover:to-[#d45a15] text-white py-4 rounded-xl text-lg font-bold shadow-[0_4px_20px_rgba(251,120,48,0.4)] hover:shadow-[0_6px_28px_rgba(251,120,48,0.5)] transition-all active:scale-[0.98] overflow-hidden"
+            >
+              <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+              <span className="relative">{landing.buyButtonText}</span>
             </button>
             <p className="text-xs text-gray-400 text-center mt-2">{tr.ctaSub}</p>
           </div>
         </div>
       )}
-
-      {/* Footer */}
-      <footer className="bg-gray-900 py-8 text-center">
-        <p className="text-sm text-white/40">
-          © {new Date().getFullYear()} laptopguru.pl — {tr.copyright}
-        </p>
-      </footer>
     </div>
   );
 }
@@ -807,8 +826,8 @@ function SpecRow({ icon, label, value }: { icon: React.ReactNode; label: string;
     <div className="flex items-center gap-3 bg-gray-50 rounded-lg px-4 py-3">
       <span className="flex-shrink-0">{icon}</span>
       <div className="min-w-0">
-        <p className="text-xs text-gray-500">{label}</p>
-        <p className="text-sm font-semibold text-gray-900 truncate">{value}</p>
+        <p className="text-xs text-gray-500 m-0">{label}</p>
+        <p className="text-sm font-semibold text-gray-900 truncate m-0">{value}</p>
       </div>
     </div>
   );

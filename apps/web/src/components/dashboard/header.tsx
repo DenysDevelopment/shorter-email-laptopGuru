@@ -21,7 +21,7 @@ export function Header() {
 		<header className='sticky top-0 z-40 bg-white border-b border-gray-200'>
 			<div className='max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between'>
 				<Link href='/dashboard' className='flex items-baseline gap-1.5'>
-					<span className='text-lg font-bold text-gray-900'>shorterLINK</span>
+					<span className='text-lg font-bold text-gray-900'>LaptopGuru CRM</span>
 				</Link>
 
 				<nav className='hidden md:flex items-center gap-1'>

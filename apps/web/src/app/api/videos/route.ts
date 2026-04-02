@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { authorize } from "@/lib/authorize";
 import { prisma } from "@/lib/db";
 import { extractYoutubeId, fetchVideoInfo } from "@/lib/youtube";
-import { PERMISSIONS } from "@shorterlink/shared";
+import { PERMISSIONS } from "@laptopguru-crm/shared";
 
 export async function GET() {
   const { session, error } = await authorize(PERMISSIONS.VIDEOS_READ);

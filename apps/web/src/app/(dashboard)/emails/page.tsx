@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import type { IncomingEmail } from "@/types";
 import { useEmails } from "@/hooks/use-emails";
@@ -13,7 +13,7 @@ import { EditEmailModal } from "@/components/dashboard/edit-email-modal";
 export default function EmailsPage() {
   const searchParams = useSearchParams();
   const channelId = searchParams.get("channel");
-  const [channelName, setChannelName] = useState<string | null>(null);
+  const [fetchedChannelName, setFetchedChannelName] = useState<{ id: string | null; name: string | null }>({ id: null, name: null });
 
   const {
     emails, filter, category, page, totalPages, total, loading,
@@ -23,23 +23,27 @@ export default function EmailsPage() {
 
   // Fetch channel name if filtering by channel
   useEffect(() => {
-    if (!channelId) {
-      setChannelName(null);
-      return;
-    }
+    if (!channelId) return;
+    let cancelled = false;
     async function fetchChannelName() {
       try {
         const res = await fetch(`/api/messaging/channels/${channelId}`);
-        if (res.ok) {
+        if (res.ok && !cancelled) {
           const data = await res.json();
-          setChannelName(data.channel?.name || null);
+          setFetchedChannelName({ id: channelId, name: data.channel?.name || null });
         }
       } catch {
-        setChannelName(null);
+        if (!cancelled) setFetchedChannelName({ id: channelId, name: null });
       }
     }
     fetchChannelName();
+    return () => { cancelled = true; };
   }, [channelId]);
+
+  const channelName = useMemo(
+    () => (channelId && fetchedChannelName.id === channelId ? fetchedChannelName.name : null),
+    [channelId, fetchedChannelName],
+  );
 
   function onArchive(e: React.MouseEvent, id: string) {
     e.preventDefault();

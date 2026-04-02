@@ -19,15 +19,15 @@ export default async function SuperAdminLayout({
   return (
     <div className="min-h-screen bg-gray-100">
       <nav className="bg-gray-900 text-white px-6 py-3 flex items-center gap-6 sticky top-0 z-40">
-        <span className="font-bold text-base">⚙ Super Admin</span>
+        <span className="font-bold text-base">⚙ Супер-админ</span>
         <Link href="/super-admin/dashboard" className="text-gray-300 hover:text-white text-sm transition-colors">
-          Dashboard
+          Обзор
         </Link>
         <Link href="/super-admin/companies" className="text-gray-300 hover:text-white text-sm transition-colors">
-          Companies
+          Компании
         </Link>
         <Link href="/super-admin/users" className="text-gray-300 hover:text-white text-sm transition-colors">
-          Users
+          Пользователи
         </Link>
         <div className="ml-auto">
           <SuperAdminNavActions email={email} />

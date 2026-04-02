@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authorize } from "@/lib/authorize";
 import { prisma } from "@/lib/db";
-import { PERMISSIONS } from "@shorterlink/shared";
+import { PERMISSIONS } from "@laptopguru-crm/shared";
 import type { Prisma } from "@/generated/prisma/client";
 
 export async function GET(request: NextRequest) {
@@ -15,7 +15,9 @@ export async function GET(request: NextRequest) {
   const search = url.searchParams.get("search");
   const assigneeId = url.searchParams.get("assigneeId");
 
-  const where: Prisma.ConversationWhereInput = {};
+  const where: Prisma.ConversationWhereInput = {
+    companyId: session.user.companyId ?? "",
+  };
 
   if (status) {
     where.status = status as Prisma.EnumConversationStatusFilter;

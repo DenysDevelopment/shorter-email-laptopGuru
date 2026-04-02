@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authorize } from "@/lib/authorize";
 import { prisma } from "@/lib/db";
-import { PERMISSIONS } from "@shorterlink/shared";
+import { PERMISSIONS } from "@laptopguru-crm/shared";
 
 const DAY_MAP: Record<string, string> = {
   MONDAY: "monday",
@@ -30,11 +30,11 @@ interface DaySchedule {
 }
 
 export async function GET() {
-  const { error } = await authorize(PERMISSIONS.MESSAGING_HOURS_MANAGE);
+  const { session, error } = await authorize(PERMISSIONS.MESSAGING_HOURS_MANAGE);
   if (error) return error;
 
   const schedule = await prisma.businessHoursSchedule.findFirst({
-    where: { isDefault: true },
+    where: { isDefault: true, companyId: session.user.companyId ?? "" },
     include: {
       slots: true,
     },

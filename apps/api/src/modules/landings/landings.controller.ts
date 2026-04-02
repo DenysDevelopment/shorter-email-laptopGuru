@@ -16,7 +16,7 @@ import { Request } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
-import { PERMISSIONS } from '@shorterlink/shared';
+import { PERMISSIONS } from '@laptopguru-crm/shared';
 import { LandingsService } from './landings.service';
 
 @ApiTags('Landings')

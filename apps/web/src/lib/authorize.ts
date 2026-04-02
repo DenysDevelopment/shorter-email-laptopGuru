@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth';
-import { hasPermission } from '@shorterlink/shared';
-import type { Permission } from '@shorterlink/shared';
+import { hasPermission } from '@laptopguru-crm/shared';
+import type { Permission } from '@laptopguru-crm/shared';
 import { NextResponse } from 'next/server';
 import type { Session } from 'next-auth';
 

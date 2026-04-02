@@ -94,7 +94,7 @@ export function CreateCompanyForm({ accessToken }: Props) {
                   name="name"
                   type="text"
                   required
-                  placeholder="Acme Corp"
+                  placeholder="LaptopGuru"
                   onChange={(e) => {
                     const slugInput = e.currentTarget.form?.querySelector<HTMLInputElement>(
                       '[name="slug"]'
@@ -116,7 +116,7 @@ export function CreateCompanyForm({ accessToken }: Props) {
                   name="slug"
                   type="text"
                   required
-                  placeholder="acme-corp"
+                  placeholder="laptopguru"
                   pattern="[a-z0-9-]+"
                   onInput={(e) => {
                     (e.currentTarget as HTMLInputElement).dataset.touched = "1";
@@ -136,7 +136,7 @@ export function CreateCompanyForm({ accessToken }: Props) {
                   name="adminEmail"
                   type="email"
                   required
-                  placeholder="admin@company.com"
+                  placeholder="admin@laptopguru.com"
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -146,7 +146,7 @@ export function CreateCompanyForm({ accessToken }: Props) {
                 <input
                   name="adminName"
                   type="text"
-                  placeholder="Иван Петренко"
+                  placeholder="Иван Иванов"
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>

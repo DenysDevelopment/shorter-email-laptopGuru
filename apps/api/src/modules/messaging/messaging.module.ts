@@ -8,7 +8,6 @@ import { TagsModule } from './tags/tags.module';
 import { NotesModule } from './notes/notes.module';
 import { TemplatesModule } from './templates/templates.module';
 import { QuickRepliesModule } from './quick-replies/quick-replies.module';
-import { AutoReplyModule } from './auto-reply/auto-reply.module';
 import { TeamsModule } from './teams/teams.module';
 import { BusinessHoursModule } from './business-hours/business-hours.module';
 import { MessagingAnalyticsModule } from './analytics/messaging-analytics.module';
@@ -28,7 +27,6 @@ import { SyncModule } from './sync/sync.module';
     NotesModule,
     TemplatesModule,
     QuickRepliesModule,
-    AutoReplyModule,
     TeamsModule,
     BusinessHoursModule,
     MessagingAnalyticsModule,

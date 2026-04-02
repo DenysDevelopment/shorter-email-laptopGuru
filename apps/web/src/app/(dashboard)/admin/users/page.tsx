@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { PERMISSION_GROUPS } from "@shorterlink/shared";
-import type { Permission } from "@shorterlink/shared";
+import { PERMISSION_GROUPS } from "@laptopguru-crm/shared";
+import type { Permission } from "@laptopguru-crm/shared";
 
 function generatePassword(length = 12): string {
   const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$";
@@ -430,9 +430,6 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      <p className="mt-4 text-xs text-gray-400">
-        Изменения вступят в силу после повторного входа пользователя.
-      </p>
     </div>
   );
 }

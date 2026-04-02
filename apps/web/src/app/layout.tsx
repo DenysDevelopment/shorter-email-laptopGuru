@@ -9,7 +9,6 @@ const inter = Inter({
 
 export const metadata: Metadata = {
 	title: 'CRM - LaptopGuru',
-	// description: "Внутренний инструмент для обработки заявок и отправки email с видеообзорами",
 };
 
 export default function RootLayout({

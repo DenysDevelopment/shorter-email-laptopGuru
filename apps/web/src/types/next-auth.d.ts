@@ -5,6 +5,7 @@ declare module "next-auth" {
     role: string;
     permissions: string[];
     companyId: string | null;
+    enabledModules: string[];
     tokenVersion: number;
     impersonating?: boolean;
   }
@@ -16,6 +17,7 @@ declare module "next-auth" {
       permissions: string[];
       companyId: string | null;
       companyName: string | null;
+      enabledModules: string[];
       tokenVersion: number;
       impersonating?: boolean;
       accessToken?: string;
@@ -30,6 +32,7 @@ declare module "next-auth/jwt" {
     permissions: string[];
     companyId: string | null;
     companyName: string | null;
+    enabledModules: string[];
     tokenVersion: number;
     impersonating?: boolean;
     accessToken?: string;

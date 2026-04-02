@@ -35,6 +35,7 @@ export class SuperAdminCompaniesService {
         slug: dto.slug,
         description: dto.description,
         logo: dto.logo,
+        enabledModules: dto.enabledModules,
         users: {
           create: {
             email: dto.adminEmail.toLowerCase().trim(),

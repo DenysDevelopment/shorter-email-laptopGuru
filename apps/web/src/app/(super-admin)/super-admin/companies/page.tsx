@@ -35,7 +35,7 @@ export default async function SuperAdminCompaniesPage() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Companies</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Компании</h1>
         {token && <CreateCompanyForm accessToken={token} />}
       </div>
 
@@ -54,11 +54,11 @@ export default async function SuperAdminCompaniesPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-left">
               <tr>
-                <th className="px-4 py-3 font-medium text-gray-600">Name</th>
+                <th className="px-4 py-3 font-medium text-gray-600">Название</th>
                 <th className="px-4 py-3 font-medium text-gray-600">Slug</th>
-                <th className="px-4 py-3 font-medium text-gray-600">Users</th>
-                <th className="px-4 py-3 font-medium text-gray-600">Status</th>
-                <th className="px-4 py-3 font-medium text-gray-600">Created</th>
+                <th className="px-4 py-3 font-medium text-gray-600">Пользователи</th>
+                <th className="px-4 py-3 font-medium text-gray-600">Статус</th>
+                <th className="px-4 py-3 font-medium text-gray-600">Создана</th>
                 <th className="px-4 py-3 font-medium text-gray-600"></th>
               </tr>
             </thead>
@@ -76,7 +76,7 @@ export default async function SuperAdminCompaniesPage() {
                           : "bg-red-100 text-red-700"
                       }`}
                     >
-                      {c.isActive ? "Active" : "Inactive"}
+                      {c.isActive ? "Активна" : "Неактивна"}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-gray-500 text-xs">
@@ -87,7 +87,7 @@ export default async function SuperAdminCompaniesPage() {
                       href={`/super-admin/companies/${c.id}`}
                       className="text-blue-600 hover:underline text-xs"
                     >
-                      View →
+                      Открыть →
                     </Link>
                   </td>
                 </tr>

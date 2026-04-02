@@ -5,8 +5,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
-import { hasPermission, PERMISSIONS } from '@shorterlink/shared';
-import type { Permission } from '@shorterlink/shared';
+import { hasPermission, PERMISSIONS } from '@laptopguru-crm/shared';
+import type { Permission } from '@laptopguru-crm/shared';
 import { useMessagingEvents } from '@/hooks/use-messaging-events';
 
 interface NavChild {
@@ -20,6 +20,7 @@ interface NavItem {
 	href: string;
 	label: string;
 	permission?: Permission;
+	module?: string;
 	icon: React.ReactNode;
 	children?: NavChild[];
 }
@@ -52,6 +53,7 @@ const navItems: NavItem[] = [
 	{
 		href: '/messaging',
 		label: 'Почта',
+		module: 'messaging',
 		permission: PERMISSIONS.MESSAGING_INBOX_READ,
 		icon: (
 			<svg
@@ -75,6 +77,7 @@ const navItems: NavItem[] = [
 	{
 		href: '/emails',
 		label: 'Заявки и Видео',
+		module: 'emails',
 		permission: PERMISSIONS.EMAILS_READ,
 		icon: (
 			<svg
@@ -100,6 +103,7 @@ const navItems: NavItem[] = [
 	{
 		href: '/quicklinks',
 		label: 'Редиректы',
+		module: 'quicklinks',
 		permission: PERMISSIONS.QUICKLINKS_READ,
 		icon: (
 			<svg
@@ -117,8 +121,9 @@ const navItems: NavItem[] = [
 		),
 	},
 	{
-		href: '/messaging/settings/channels',
+		href: '/settings/channels',
 		label: 'Настройки CRM',
+		module: 'messaging',
 		permission: PERMISSIONS.MESSAGING_CHANNELS_READ,
 		icon: (
 			<svg

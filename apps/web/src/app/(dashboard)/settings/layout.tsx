@@ -4,10 +4,9 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const SETTINGS_TABS = [
-	{ href: '/messaging/settings/channels', label: 'Каналы' },
-	{ href: '/messaging/settings/templates', label: 'Шаблоны' },
-	{ href: '/messaging/settings/quick-replies', label: 'Быстрые ответы' },
-	{ href: '/messaging/settings/auto-replies', label: 'Авто-ответы' },
+	{ href: '/settings/channels', label: 'Каналы' },
+	{ href: '/settings/templates', label: 'Шаблоны' },
+	{ href: '/settings/quick-replies', label: 'Быстрые ответы' },
 ];
 
 export default function SettingsLayout({
@@ -38,7 +37,9 @@ export default function SettingsLayout({
 				})}
 			</div>
 
-			{children}
+			<div className='min-h-[60vh]'>
+				{children}
+			</div>
 		</div>
 	);
 }

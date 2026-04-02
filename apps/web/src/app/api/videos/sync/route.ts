@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { authorize } from "@/lib/authorize";
 import { prisma } from "@/lib/db";
 import { fetchChannelVideos } from "@/lib/youtube";
-import { PERMISSIONS } from "@shorterlink/shared";
+import { PERMISSIONS } from "@laptopguru-crm/shared";
 
 export async function POST() {
   const { session, error } = await authorize(PERMISSIONS.VIDEOS_WRITE);
@@ -13,13 +13,17 @@ export async function POST() {
     return NextResponse.json({ error: "No company assigned" }, { status: 403 });
   }
 
-  const handle = process.env.YOUTUBE_CHANNEL_HANDLE;
-  if (!handle) {
-    return NextResponse.json({ error: "YOUTUBE_CHANNEL_HANDLE not configured" }, { status: 500 });
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: { youtubeChannelHandle: true },
+  });
+
+  if (!company?.youtubeChannelHandle) {
+    return NextResponse.json({ error: "YouTube канал не подключен" }, { status: 400 });
   }
 
   try {
-    const videos = await fetchChannelVideos(handle);
+    const videos = await fetchChannelVideos(company.youtubeChannelHandle);
     let imported = 0;
 
     for (const video of videos) {
@@ -52,9 +56,14 @@ export async function POST() {
       imported++;
     }
 
+    await prisma.company.update({
+      where: { id: companyId },
+      data: { youtubeLastSyncAt: new Date() },
+    });
+
     return NextResponse.json({ imported, total: videos.length });
-  } catch (error) {
-    console.error("[VIDEO SYNC ERROR]", error);
+  } catch (err) {
+    console.error("[VIDEO SYNC ERROR]", err);
     return NextResponse.json({ error: "Ошибка синхронизации видео" }, { status: 500 });
   }
 }

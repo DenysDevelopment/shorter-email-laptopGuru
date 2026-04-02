@@ -1,5 +1,5 @@
 {
-  "name": "@shorterlink/api-client",
+  "name": "@laptopguru-crm/api-client",
   "version": "1.0.0",
   "private": true,
   "main": "src/index.ts",

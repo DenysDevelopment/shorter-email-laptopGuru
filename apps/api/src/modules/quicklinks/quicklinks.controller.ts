@@ -4,7 +4,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, JwtUser } from '../../common/decorators/current-user.decorator';
-import { PERMISSIONS } from '@shorterlink/shared';
+import { PERMISSIONS } from '@laptopguru-crm/shared';
 import { QuickLinksService } from './quicklinks.service';
 
 @ApiTags('QuickLinks')
