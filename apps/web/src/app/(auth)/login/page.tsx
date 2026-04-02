@@ -36,7 +36,7 @@ export default function LoginPage() {
 		<div className='w-full max-w-md'>
 			<div className='bg-white rounded-2xl shadow-sm border border-gray-100 p-8'>
 				<div className='text-center mb-8'>
-					<h1 className='text-2xl font-bold text-gray-900'>shorterLINK</h1>
+					<h1 className='text-2xl font-bold text-gray-900'>LaptopGuru CRM</h1>
 				</div>
 
 				<form onSubmit={handleSubmit} className='space-y-4'>
@@ -89,7 +89,7 @@ export default function LoginPage() {
 				</form>
 
 				<p className='mt-6 text-center text-sm text-gray-400'>
-					shorterLINK — laptopguru.pl
+					LaptopGuru CRM — laptopguru.pl
 				</p>
 			</div>
 		</div>

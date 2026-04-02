@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import { hasPermission, PERMISSIONS } from '@shorterlink/shared';
+import { hasPermission, PERMISSIONS } from '@laptopguru-crm/shared';
 import { ChannelIcon, getChannelLabel } from './channel-icon';
 import { normalizeListResponse } from '@/lib/utils/normalize-response';
 

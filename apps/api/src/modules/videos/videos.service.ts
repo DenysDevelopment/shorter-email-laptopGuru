@@ -139,6 +139,38 @@ async function fetchVideoInfo(youtubeId: string): Promise<YouTubeVideoInfo> {
   };
 }
 
+/** Extract a clean @handle from a handle string or YouTube channel URL. */
+function normalizeChannelHandle(input: string): string {
+  const trimmed = input.trim();
+  if (/^@[\w.-]+$/.test(trimmed)) return trimmed;
+  const handleMatch = trimmed.match(/(?:youtube\.com\/)(@[\w.-]+)/);
+  if (handleMatch) return handleMatch[1];
+  if (/^[\w.-]+$/.test(trimmed)) return `@${trimmed}`;
+  throw new BadRequestException('Invalid YouTube channel handle or URL');
+}
+
+interface YouTubeChannelInfo {
+  handle: string;
+  title: string;
+  thumbnail: string;
+}
+
+async function fetchChannelInfo(handle: string): Promise<YouTubeChannelInfo> {
+  const apiKey = getApiKey();
+  const clean = handle.startsWith('@') ? handle : `@${handle}`;
+  const url = `https://www.googleapis.com/youtube/v3/channels?part=snippet,contentDetails&forHandle=${encodeURIComponent(clean)}&key=${apiKey}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new InternalServerErrorException(`YouTube API error: ${res.status}`);
+  const data = await res.json();
+  if (!data.items?.length) throw new NotFoundException(`YouTube channel not found: ${clean}`);
+  const item = data.items[0];
+  return {
+    handle: clean,
+    title: item.snippet.title,
+    thumbnail: item.snippet.thumbnails?.default?.url || '',
+  };
+}
+
 /* ------------------------------------------------------------------ */
 /*  Service                                                           */
 /* ------------------------------------------------------------------ */
@@ -213,24 +245,68 @@ export class VideosService {
     return { ok: true };
   }
 
+  async getYoutubeChannel() {
+    const companyId = this.cls.get<string>('companyId');
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: { youtubeChannelHandle: true, youtubeLastSyncAt: true },
+    });
+    if (!company?.youtubeChannelHandle) return null;
+    try {
+      const info = await fetchChannelInfo(company.youtubeChannelHandle);
+      return {
+        handle: company.youtubeChannelHandle,
+        channelTitle: info.title,
+        thumbnail: info.thumbnail,
+        lastSyncAt: company.youtubeLastSyncAt,
+      };
+    } catch {
+      return {
+        handle: company.youtubeChannelHandle,
+        channelTitle: null,
+        thumbnail: null,
+        lastSyncAt: company.youtubeLastSyncAt,
+      };
+    }
+  }
+
+  async updateYoutubeChannel(handleInput: string) {
+    const handle = normalizeChannelHandle(handleInput);
+    const info = await fetchChannelInfo(handle);
+    const companyId = this.cls.get<string>('companyId');
+    await this.prisma.company.update({
+      where: { id: companyId },
+      data: { youtubeChannelHandle: handle },
+    });
+    return { handle, channelTitle: info.title, thumbnail: info.thumbnail };
+  }
+
+  async removeYoutubeChannel() {
+    const companyId = this.cls.get<string>('companyId');
+    await this.prisma.company.update({
+      where: { id: companyId },
+      data: { youtubeChannelHandle: null, youtubeLastSyncAt: null },
+    });
+    return { ok: true };
+  }
+
   /** Sync all videos from the configured YouTube channel. */
   async syncFromChannel(userId: string) {
-    const handle = process.env.YOUTUBE_CHANNEL_HANDLE;
-    if (!handle) {
-      throw new InternalServerErrorException('YOUTUBE_CHANNEL_HANDLE not configured');
+    const companyId = this.cls.get<string>('companyId');
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: { youtubeChannelHandle: true },
+    });
+    if (!company?.youtubeChannelHandle) {
+      throw new BadRequestException('No YouTube channel connected');
     }
-
     try {
-      const videos = await fetchChannelVideos(handle);
+      const videos = await fetchChannelVideos(company.youtubeChannelHandle);
       let imported = 0;
-
-      const companyId = this.cls.get<string>('companyId');
-
       for (const video of videos) {
         const existing = await this.prisma.video.findUnique({
           where: { youtubeId_companyId: { youtubeId: video.youtubeId, companyId } },
         });
-
         if (existing) {
           if (!existing.active) {
             await this.prisma.video.update({
@@ -241,7 +317,6 @@ export class VideosService {
           }
           continue;
         }
-
         await this.prisma.video.create({
           data: {
             youtubeId: video.youtubeId,
@@ -255,7 +330,10 @@ export class VideosService {
         });
         imported++;
       }
-
+      await this.prisma.company.update({
+        where: { id: companyId },
+        data: { youtubeLastSyncAt: new Date() },
+      });
       return { imported, total: videos.length };
     } catch (error) {
       this.logger.error('Video sync failed', error);

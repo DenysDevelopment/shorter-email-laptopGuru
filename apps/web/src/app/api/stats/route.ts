@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { authorize } from "@/lib/authorize";
 import { prisma } from "@/lib/db";
-import { PERMISSIONS } from "@shorterlink/shared";
+import { PERMISSIONS } from "@laptopguru-crm/shared";
 
 export async function GET() {
-  const { error } = await authorize(PERMISSIONS.DASHBOARD_READ);
+  const { session, error } = await authorize(PERMISSIONS.DASHBOARD_READ);
   if (error) return error;
+
+  const companyId = session.user.companyId ?? "";
 
   const [
     totalEmails,
@@ -16,14 +18,14 @@ export async function GET() {
     failedSent,
     recentEmails,
   ] = await Promise.all([
-    prisma.incomingEmail.count({ where: { archived: false } }),
-    prisma.incomingEmail.count({ where: { processed: false, archived: false } }),
-    prisma.video.count({ where: { active: true } }),
-    prisma.landing.count(),
-    prisma.sentEmail.count(),
-    prisma.sentEmail.count({ where: { status: "failed" } }),
+    prisma.incomingEmail.count({ where: { companyId, archived: false } }),
+    prisma.incomingEmail.count({ where: { companyId, processed: false, archived: false } }),
+    prisma.video.count({ where: { companyId, active: true } }),
+    prisma.landing.count({ where: { companyId } }),
+    prisma.sentEmail.count({ where: { companyId } }),
+    prisma.sentEmail.count({ where: { companyId, status: "failed" } }),
     prisma.incomingEmail.findMany({
-      where: { archived: false },
+      where: { companyId, archived: false },
       orderBy: { receivedAt: "desc" },
       take: 5,
       select: {

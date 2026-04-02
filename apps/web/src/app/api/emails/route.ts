@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { authorize } from "@/lib/authorize";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
-import { PERMISSIONS } from "@shorterlink/shared";
+import { PERMISSIONS } from "@laptopguru-crm/shared";
 
 export async function GET(request: NextRequest) {
-  const { error } = await authorize(PERMISSIONS.EMAILS_READ);
+  const { session, error } = await authorize(PERMISSIONS.EMAILS_READ);
   if (error) return error;
 
   const { searchParams } = request.nextUrl;
@@ -15,7 +15,9 @@ export async function GET(request: NextRequest) {
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
   const perPage = 20;
 
-  const where: Prisma.IncomingEmailWhereInput = {};
+  const where: Prisma.IncomingEmailWhereInput = {
+    companyId: session.user.companyId ?? "",
+  };
 
   // Channel filter
   if (channelId) {

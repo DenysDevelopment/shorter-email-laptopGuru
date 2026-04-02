@@ -39,7 +39,7 @@ async function bootstrap() {
   app.useGlobalFilters(new GlobalExceptionFilter());
 
   const config = new DocumentBuilder()
-    .setTitle('ShorterLink API')
+    .setTitle('LaptopGuru CRM API')
     .setDescription('CRM & Email Management API')
     .setVersion('1.0')
     .addBearerAuth()

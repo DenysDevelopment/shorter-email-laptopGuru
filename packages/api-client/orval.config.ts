@@ -1,7 +1,7 @@
 import { defineConfig } from 'orval';
 
 export default defineConfig({
-  shorterlink: {
+  'laptopguru-crm': {
     input: {
       target: 'http://localhost:4000/api-json',
     },

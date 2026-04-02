@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_BUILD_VERSION: buildVersion,
   },
   output: "standalone",
-  transpilePackages: ["@shorterlink/shared"],
+  transpilePackages: ["@laptopguru-crm/shared"],
   outputFileTracingRoot: path.resolve(__dirname, "../../"),
   turbopack: {
     root: path.resolve(__dirname, "../../"),

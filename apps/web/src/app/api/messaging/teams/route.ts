@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authorize } from "@/lib/authorize";
 import { prisma } from "@/lib/db";
-import { PERMISSIONS } from "@shorterlink/shared";
+import { PERMISSIONS } from "@laptopguru-crm/shared";
 
 export async function GET() {
-  const { error } = await authorize(PERMISSIONS.MESSAGING_CONVERSATIONS_READ);
+  const { session, error } = await authorize(PERMISSIONS.MESSAGING_CONVERSATIONS_READ);
   if (error) return error;
 
   const teams = await prisma.team.findMany({
+    where: { companyId: session.user.companyId ?? "" },
     orderBy: { name: "asc" },
     include: {
       members: {

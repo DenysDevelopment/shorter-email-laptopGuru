@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import type { Video } from "@/types";
 import { EmptyState } from "@/components/ui/empty-state";
+import { YouTubeChannelCard } from "@/components/dashboard/videos/youtube-channel-card";
 
 export default function VideosPage() {
   const [videos, setVideos] = useState<Video[]>([]);
@@ -58,6 +59,8 @@ export default function VideosPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Видео</h1>
       </div>
+
+      <YouTubeChannelCard onSyncComplete={fetchVideos} />
 
       <form onSubmit={handleAdd} className="mb-8">
         <div className="flex gap-3">

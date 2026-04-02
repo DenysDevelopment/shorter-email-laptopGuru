@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import { authorize } from "@/lib/authorize";
 import { prisma } from "@/lib/db";
-import { PERMISSIONS } from "@shorterlink/shared";
+import { PERMISSIONS } from "@laptopguru-crm/shared";
 
 export async function GET() {
-  const { error } = await authorize(PERMISSIONS.LINKS_READ);
+  const { session, error } = await authorize(PERMISSIONS.LINKS_READ);
   if (error) return error;
 
   try {
     const landings = await prisma.landing.findMany({
+      where: { companyId: session.user.companyId ?? "" },
       orderBy: { createdAt: "desc" },
       include: {
         video: { select: { title: true, thumbnail: true } },

@@ -43,17 +43,17 @@ export default async function SuperAdminDashboardPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6 text-gray-900">Global Dashboard</h1>
+      <h1 className="text-2xl font-bold mb-6 text-gray-900">Глобальный обзор</h1>
 
       {stats ? (
         <>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
             {[
-              { label: "Companies", value: stats.totals.totalCompanies },
-              { label: "Active", value: stats.totals.activeCompanies },
-              { label: "Users", value: stats.totals.totalUsers },
-              { label: "Contacts", value: stats.totals.totalContacts },
-              { label: "Conversations", value: stats.totals.totalConversations },
+              { label: "Компании", value: stats.totals.totalCompanies },
+              { label: "Активные", value: stats.totals.activeCompanies },
+              { label: "Пользователи", value: stats.totals.totalUsers },
+              { label: "Контакты", value: stats.totals.totalContacts },
+              { label: "Разговоры", value: stats.totals.totalConversations },
             ].map((s) => (
               <div
                 key={s.label}
@@ -67,21 +67,21 @@ export default async function SuperAdminDashboardPage() {
 
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="font-semibold text-gray-800">Recent Companies</h2>
+              <h2 className="font-semibold text-gray-800">Последние компании</h2>
               <Link
                 href="/super-admin/companies"
                 className="text-sm text-blue-600 hover:underline"
               >
-                View all →
+                Все →
               </Link>
             </div>
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-left">
                 <tr>
-                  <th className="px-4 py-2 font-medium text-gray-600">Name</th>
-                  <th className="px-4 py-2 font-medium text-gray-600">Users</th>
-                  <th className="px-4 py-2 font-medium text-gray-600">Contacts</th>
-                  <th className="px-4 py-2 font-medium text-gray-600">Status</th>
+                  <th className="px-4 py-2 font-medium text-gray-600">Название</th>
+                  <th className="px-4 py-2 font-medium text-gray-600">Пользователи</th>
+                  <th className="px-4 py-2 font-medium text-gray-600">Контакты</th>
+                  <th className="px-4 py-2 font-medium text-gray-600">Статус</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -105,7 +105,7 @@ export default async function SuperAdminDashboardPage() {
                             : "bg-red-100 text-red-700"
                         }`}
                       >
-                        {c.isActive ? "Active" : "Inactive"}
+                        {c.isActive ? "Активна" : "Неактивна"}
                       </span>
                     </td>
                   </tr>

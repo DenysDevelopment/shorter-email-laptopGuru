@@ -30,7 +30,6 @@ export const PERMISSIONS = {
   MESSAGING_TEMPLATES_WRITE: 'messaging:templates:write',
   MESSAGING_CHANNELS_READ: 'messaging:channels:read',
   MESSAGING_CHANNELS_WRITE: 'messaging:channels:write',
-  MESSAGING_AUTO_REPLY_MANAGE: 'messaging:autoreplies:manage',
   MESSAGING_TEAMS_MANAGE: 'messaging:teams:manage',
   MESSAGING_HOURS_MANAGE: 'messaging:hours:manage',
   MESSAGING_ANALYTICS_READ: 'messaging:analytics:read',
@@ -128,7 +127,6 @@ export const PERMISSION_GROUPS: { label: string; permissions: { value: Permissio
       { value: PERMISSIONS.MESSAGING_TEMPLATES_WRITE, label: 'Управление шаблонами' },
       { value: PERMISSIONS.MESSAGING_CHANNELS_READ, label: 'Просмотр каналов' },
       { value: PERMISSIONS.MESSAGING_CHANNELS_WRITE, label: 'Настройка каналов' },
-      { value: PERMISSIONS.MESSAGING_AUTO_REPLY_MANAGE, label: 'Управление авто-ответами' },
       { value: PERMISSIONS.MESSAGING_TEAMS_MANAGE, label: 'Управление командами' },
       { value: PERMISSIONS.MESSAGING_HOURS_MANAGE, label: 'Управление графиком работы' },
       { value: PERMISSIONS.MESSAGING_ANALYTICS_READ, label: 'Аналитика мессенджера' },
@@ -152,7 +150,7 @@ export const ROUTE_PERMISSIONS: Record<string, Permission> = {
   '/messaging': PERMISSIONS.MESSAGING_INBOX_READ,
   '/messaging/inbox': PERMISSIONS.MESSAGING_INBOX_READ,
   '/messaging/contacts': PERMISSIONS.MESSAGING_CONTACTS_READ,
-  '/messaging/settings': PERMISSIONS.MESSAGING_CHANNELS_READ,
+  '/settings': PERMISSIONS.MESSAGING_CHANNELS_READ,
   '/messaging/analytics': PERMISSIONS.MESSAGING_ANALYTICS_READ,
 };
 

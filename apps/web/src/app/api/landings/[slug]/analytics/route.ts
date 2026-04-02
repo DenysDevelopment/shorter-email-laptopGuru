@@ -1,19 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authorize } from "@/lib/authorize";
 import { prisma } from "@/lib/db";
-import { PERMISSIONS } from "@shorterlink/shared";
+import { PERMISSIONS } from "@laptopguru-crm/shared";
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
-  const { error } = await authorize(PERMISSIONS.ANALYTICS_READ);
+  const { session, error } = await authorize(PERMISSIONS.ANALYTICS_READ);
   if (error) return error;
 
   const { slug } = await params;
 
   const landing = await prisma.landing.findFirst({
-    where: { slug },
+    where: { slug, companyId: session.user.companyId ?? "" },
     include: {
       video: { select: { title: true, thumbnail: true } },
       incomingEmail: { select: { customerName: true, customerEmail: true } },

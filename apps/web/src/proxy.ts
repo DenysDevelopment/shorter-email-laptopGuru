@@ -6,13 +6,14 @@ export default auth;
 
 export const config = {
   matcher: [
-    "/dashboard/:path*",
-    "/emails/:path*",
-    "/videos/:path*",
-    "/send/:path*",
-    "/sent/:path*",
-    "/links/:path*",
-    "/analytics/:path*",
-    "/quicklinks/:path*",
+    /*
+     * Match all request paths except:
+     * - _next/static (static files)
+     * - _next/image (image optimization)
+     * - favicon.ico, sitemap.xml, robots.txt
+     * - public assets (images, etc.)
+     * - api/auth (NextAuth endpoints)
+     */
+    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authorize } from "@/lib/authorize";
 import { prisma } from "@/lib/db";
-import { PERMISSIONS } from "@shorterlink/shared";
+import { PERMISSIONS } from "@laptopguru-crm/shared";
 import type { Prisma } from "@/generated/prisma/client";
 
 export async function GET(request: NextRequest) {
-  const { error } = await authorize(PERMISSIONS.MESSAGING_CONTACTS_READ);
+  const { session, error } = await authorize(PERMISSIONS.MESSAGING_CONTACTS_READ);
   if (error) return error;
 
   const url = request.nextUrl;
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   const limit = Math.min(50, Math.max(1, Number(url.searchParams.get("limit")) || 25));
   const search = url.searchParams.get("search");
 
-  const where: Prisma.ContactWhereInput = {};
+  const where: Prisma.ContactWhereInput = { companyId: session.user.companyId ?? "" };
 
   if (search) {
     where.OR = [

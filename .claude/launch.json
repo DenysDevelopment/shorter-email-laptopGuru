@@ -3,10 +3,11 @@
   "configurations": [
     {
       "name": "web",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--workspace=@shorterlink/web"],
+      "runtimeExecutable": "/bin/bash",
+      "runtimeArgs": ["-c", "export PATH=/Users/denysmaksymuck/.nvm/versions/node/v25.2.1/bin:$PATH && npm run dev --workspace=@laptopguru-crm/web"],
       "port": 3000,
-      "autoPort": true
+      "autoPort": true,
+      "portReady": "ready"
     }
   ]
 }

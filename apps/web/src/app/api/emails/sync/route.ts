@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { authorize } from "@/lib/authorize";
 import { syncEmails } from "@/lib/imap";
-import { PERMISSIONS } from "@shorterlink/shared";
+import { PERMISSIONS } from "@laptopguru-crm/shared";
 
 export async function POST() {
   const { error } = await authorize(PERMISSIONS.EMAILS_WRITE);

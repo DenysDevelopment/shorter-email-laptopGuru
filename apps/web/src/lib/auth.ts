@@ -8,6 +8,50 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
+  callbacks: {
+    ...authConfig.callbacks,
+    async jwt({ token, user }) {
+      // Initial sign-in: populate token from user object
+      if (user) {
+        const u = user as unknown as Record<string, unknown>;
+        token.id = user.id;
+        token.role = u.role ?? 'USER';
+        token.permissions = u.permissions ?? [];
+        token.companyId = u.companyId ?? null;
+        token.companyName = u.companyName ?? null;
+        token.enabledModules = u.enabledModules ?? [];
+        token.tokenVersion = u.tokenVersion ?? 0;
+        token.accessToken = u.accessToken as string | undefined;
+        return token;
+      }
+
+      // Subsequent requests: refresh from DB
+      const fresh = await prisma.user.findUnique({
+        where: { id: token.id as string },
+        select: {
+          role: true,
+          permissions: true,
+          companyId: true,
+          tokenVersion: true,
+          company: { select: { name: true, enabledModules: true } },
+        },
+      });
+
+      // User deleted — force sign-out
+      if (!fresh) {
+        return {} as typeof token;
+      }
+
+      token.role = fresh.role;
+      token.permissions = fresh.permissions;
+      token.companyId = fresh.companyId;
+      token.companyName = fresh.company?.name ?? null;
+      token.enabledModules = fresh.company?.enabledModules ?? [];
+      token.tokenVersion = fresh.tokenVersion;
+
+      return token;
+    },
+  },
   providers: [
     Credentials({
       credentials: {
@@ -40,7 +84,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               select: {
                 permissions: true,
                 tokenVersion: true,
-                company: { select: { name: true } },
+                company: { select: { name: true, enabledModules: true } },
               },
             });
 
@@ -52,6 +96,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               permissions: user?.permissions ?? [],
               companyId: apiUser.companyId,
               companyName: user?.company?.name ?? null,
+              enabledModules: user?.company?.enabledModules ?? [],
               tokenVersion: user?.tokenVersion ?? 0,
               accessToken,
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -76,7 +121,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             permissions: true,
             companyId: true,
             tokenVersion: true,
-            company: { select: { name: true } },
+            company: { select: { name: true, enabledModules: true } },
           },
         });
 
@@ -92,6 +137,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           permissions: user.permissions,
           companyId: user.companyId ?? null,
           companyName: user.company?.name ?? null,
+          enabledModules: user.company?.enabledModules ?? [],
           tokenVersion: user.tokenVersion,
           accessToken: undefined, // no API token in fallback mode
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

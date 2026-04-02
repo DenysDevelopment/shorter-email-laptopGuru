@@ -33,17 +33,17 @@ export default async function SuperAdminUsersPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6 text-gray-900">All Users</h1>
+      <h1 className="text-2xl font-bold mb-6 text-gray-900">Все пользователи</h1>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-left">
             <tr>
               <th className="px-4 py-3 font-medium text-gray-600">Email</th>
-              <th className="px-4 py-3 font-medium text-gray-600">Name</th>
-              <th className="px-4 py-3 font-medium text-gray-600">Role</th>
-              <th className="px-4 py-3 font-medium text-gray-600">Company</th>
-              <th className="px-4 py-3 font-medium text-gray-600">Created</th>
+              <th className="px-4 py-3 font-medium text-gray-600">Имя</th>
+              <th className="px-4 py-3 font-medium text-gray-600">Роль</th>
+              <th className="px-4 py-3 font-medium text-gray-600">Компания</th>
+              <th className="px-4 py-3 font-medium text-gray-600">Создан</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">

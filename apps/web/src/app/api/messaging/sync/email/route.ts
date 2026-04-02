@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { authorize } from "@/lib/authorize";
-import { PERMISSIONS } from "@shorterlink/shared";
+import { PERMISSIONS } from "@laptopguru-crm/shared";
 import { syncEmailsToMessaging } from "@/lib/imap-messaging";
 
 /**
