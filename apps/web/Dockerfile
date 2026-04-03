@@ -52,6 +52,9 @@ COPY --from=builder /app/apps/web/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
 
+# Install sharp for Alpine (musl) image optimization
+RUN npm install --os=linux --libc=musl --cpu=x64 sharp
+
 # Copy Prisma for migrations (schema + CLI + config + all deps)
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
