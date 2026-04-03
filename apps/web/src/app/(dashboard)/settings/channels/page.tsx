@@ -18,9 +18,6 @@ const CHANNEL_TYPES = [
 	{ value: 'SMS', label: 'SMS' },
 	{ value: 'WHATSAPP', label: 'WhatsApp' },
 	{ value: 'TELEGRAM', label: 'Telegram' },
-	{ value: 'FACEBOOK', label: 'Facebook Messenger' },
-	{ value: 'INSTAGRAM', label: 'Instagram Direct' },
-	{ value: 'WEBCHAT', label: 'Веб-чат' },
 ];
 
 const EMAIL_DEFAULTS: Record<string, string> = {
