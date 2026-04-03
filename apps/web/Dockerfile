@@ -53,7 +53,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
 
 # Install sharp for Alpine (musl) image optimization
-RUN npm install --os=linux --libc=musl --cpu=x64 sharp
+# Use a temp dir to avoid npm pruning standalone node_modules
+RUN mkdir /tmp/sharp-install && cd /tmp/sharp-install && \
+    npm init -y && npm install --os=linux --libc=musl --cpu=x64 sharp && \
+    cp -r node_modules/sharp /app/node_modules/sharp && \
+    rm -rf /tmp/sharp-install
 
 # Copy Prisma for migrations (schema + CLI + config + all deps)
 COPY --from=builder /app/prisma ./prisma

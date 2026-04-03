@@ -118,15 +118,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: appleboy/ssh-action@v1
+      - uses: actions/checkout@v5
+
+      - name: Copy compose files to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "docker-compose.yml,docker-compose.prod.yml,Caddyfile"
+          target: ${{ secrets.VPS_DEPLOY_PATH }}
+
+      - name: Deploy
+        uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd ${{ secrets.VPS_DEPLOY_PATH }}
-            # Pull latest compose files from repo
-            git pull --ff-only origin main
             # Login and pull new images
             echo ${{ secrets.GHCR_TOKEN }} | docker login ghcr.io -u ${{ secrets.GHCR_USER }} --password-stdin
             docker pull ghcr.io/denysdevelopment/shorter-email-laptopguru:latest
